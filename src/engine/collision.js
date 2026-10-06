@@ -56,6 +56,28 @@ export class CollisionWorld {
     }
     return hit;
   }
+
+  /** True if a circle at (x, z) would touch any enabled shape. Moves nothing. */
+  overlaps(x, z, r) {
+    const q = ++this.query;
+    const c = this.cell;
+    for (let cx = Math.floor((x - r) / c); cx <= Math.floor((x + r) / c); cx++) {
+      for (let cz = Math.floor((z - r) / c); cz <= Math.floor((z + r) / c); cz++) {
+        const list = this.cells.get(this.key(cx, cz));
+        if (!list) continue;
+        for (const s of list) {
+          if (s.q === q || !s.enabled) continue;
+          s.q = q;
+          if (s.box) {
+            const dx = x - Math.max(s.minX, Math.min(x, s.maxX));
+            const dz = z - Math.max(s.minZ, Math.min(z, s.maxZ));
+            if (dx * dx + dz * dz < r * r) return true;
+          } else if ((x - s.x) ** 2 + (z - s.z) ** 2 < (r + s.r) ** 2) return true;
+        }
+      }
+    }
+    return false;
+  }
 }
 
 function pushOutOfBox(e, b) {

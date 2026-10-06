@@ -34,3 +34,9 @@ export function splitCoins(total, maxCoins = 8) {
 }
 
 export const goldAfterFainting = (gold) => Math.floor(gold * FAINT_GOLD_KEPT);
+
+/** HP lost from a hit after armor. Not rounded: small bites still shrink, and the HUD shows whole hearts. */
+export const damageTaken = (dmg, block) => dmg * (1 - block);
+
+/** "2", "1.8", "4.3": damage numbers with one decimal only when armor made them fractional. */
+export const formatDamage = (n) => String(Math.round(n * 10) / 10);

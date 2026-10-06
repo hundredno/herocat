@@ -672,6 +672,129 @@ body[data-mode='title'] .floaters {
 .help li {
   margin-bottom: 6px;
 }
+.controls {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+}
+.controls th,
+.controls td {
+  padding: 5px 10px;
+  background: rgba(255, 255, 255, 0.07);
+  text-align: left;
+  vertical-align: middle;
+  line-height: 1.45;
+}
+.controls th {
+  width: 34%;
+  border-radius: 12px 0 0 12px;
+  color: #ffd35c;
+  font-weight: 800;
+}
+.controls td {
+  border-radius: 0 12px 12px 0;
+}
+.controls small {
+  color: #c9c2e6;
+}
+.help-view .help li {
+  margin-bottom: 3px;
+  line-height: 1.4;
+}
+/* the "Let's go!" / "Back" button stays reachable on short (landscape phone) screens */
+.help-view > .big {
+  position: sticky;
+  bottom: -20px;
+  box-shadow: 0 4px 0 #c45f00, 0 -8px 16px #2a2342;
+}
+.controls .i {
+  width: 1.3em;
+  height: 1.3em;
+}
+.controls kbd {
+  display: inline-block;
+  min-width: 1.7em;
+  padding: 1px 6px;
+  border-radius: 7px;
+  background: #f5f0ff;
+  color: #2a2342;
+  font: inherit;
+  font-size: 0.85em;
+  font-weight: 800;
+  text-align: center;
+  box-shadow: 0 2px 0 #9d94c4;
+}
+
+/* shop tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 6px 0 10px;
+  padding: 4px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
+}
+.tab {
+  position: relative;
+  flex: 1;
+  padding: 8px 4px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  font-weight: 800;
+  font-size: 0.9em;
+  white-space: nowrap;
+}
+.tab.on {
+  background: #6c5ce7;
+}
+.tab .dot {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #5ee28a;
+}
+.row.locked {
+  opacity: 0.75;
+}
+.row.locked .tag {
+  color: #c9c2e6;
+}
+
+/* hero name + rename */
+.rename-btn {
+  margin-left: 4px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.12);
+  font-size: 0.7em !important;
+  vertical-align: 0.15em;
+}
+.rename {
+  flex: 1;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+.rename input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 12px;
+  border: 2px solid #ffd35c;
+  border-radius: 12px;
+  background: #fff8e7;
+  color: #3b1d00;
+  font: inherit;
+  font-weight: 800;
+  font-size: 1.1em;
+  pointer-events: auto;
+  user-select: text;
+  -webkit-user-select: text;
+}
 
 /* ------------------------------------------------------------ misc */
 

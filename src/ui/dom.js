@@ -5,6 +5,10 @@ export function el(tag, className, html) {
   return e;
 }
 
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+/** For player-typed text (the hero's name) going into an HTML string. */
+export const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
+
 // Inline SVG icons (emoji coverage varies a lot on older phones, so the HUD avoids them).
 export const ICON = {
   heart:
@@ -15,6 +19,8 @@ export const ICON = {
   gem: '<svg class="i" viewBox="0 0 24 24"><path fill="#ffb84d" d="M12 2l7 7-7 13L5 9z"/><path fill="#fff3c4" d="M12 4.8 16 9l-4 7.6L8 9z"/></svg>',
   helmet:
     '<svg class="i" viewBox="0 0 24 24"><path fill="#b2bec3" d="M3 15a9 9 0 0 1 18 0v3H3z"/><rect x="2" y="17" width="20" height="3" rx="1.5" fill="#7f8c8d"/><rect x="11" y="4" width="2" height="12" fill="#d63031"/></svg>',
+  shield:
+    '<svg class="i" viewBox="0 0 24 24"><path fill="#74b9ff" d="M12 2 4 5v6c0 5.25 3.4 9.9 8 11 4.6-1.1 8-5.75 8-11V5z"/><path fill="#d6ecff" d="M12 4.2 6 6.5V11c0 4.1 2.5 7.8 6 8.9z"/></svg>',
   bag: '<svg class="i" viewBox="0 0 24 24"><path fill="#e17055" d="M5 9a4 4 0 0 1 4-4h6a4 4 0 0 1 4 4v10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2z"/><path fill="none" stroke="#e17055" stroke-width="2" d="M9 6V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V6"/><rect x="8" y="12" width="8" height="5" rx="1" fill="#fab1a0"/></svg>',
   pause: '<svg class="i" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="#fff"/><rect x="14" y="5" width="4" height="14" rx="1" fill="#fff"/></svg>',
   lock: '<svg class="i" viewBox="0 0 24 24"><rect x="5" y="10" width="14" height="11" rx="2" fill="#b2bec3"/><path fill="none" stroke="#b2bec3" stroke-width="2.5" d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>',

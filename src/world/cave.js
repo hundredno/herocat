@@ -192,6 +192,14 @@ export function buildCave(def) {
     boss,
     labels,
     interactables,
+    bounds: { minX: -(w * TILE) / 2, minZ: -(h * TILE) / 2, maxX: (w * TILE) / 2, maxZ: (h * TILE) / 2 },
+    /** Where the guide arrow can lead; r = how close counts as "there". */
+    goal(id) {
+      if (id === 'boss' && boss) return { x: boss.x, z: boss.z, r: 5 };
+      if (id === 'exit') return { x: exit[0], z: exit[1], r: 1.6 };
+      if (id === 'portal' && boss && portalOpen) return { x: boss.x, z: boss.z, r: 1.6 };
+      return null;
+    },
     onEnter(game) {
       const s = game.state;
       if (chest) chest.lid.rotation.x = s.chests[def.id] ? -1.9 : 0;

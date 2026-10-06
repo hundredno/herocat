@@ -1,11 +1,13 @@
-import { SPEAKERS } from '../game/story.js';
+import { SPEAKERS, fillName } from '../game/story.js';
 import { el } from './dom.js';
 
 const CHARS_PER_SEC = 55;
 
 /** Story text box with a portrait and a typewriter effect. play() resolves when the player finishes reading. */
 export class Dialogue {
-  constructor(root) {
+  /** heroName: () => the player's chosen name, filled into {name} in lines and speaker labels. */
+  constructor(root, heroName = () => 'Pip') {
+    this.heroName = heroName;
     this.root = el('div', 'dialogue hidden');
     this.root.innerHTML = `
       <div class="dlg-face"></div>
@@ -41,11 +43,12 @@ export class Dialogue {
   showLine() {
     const [who, text] = this.lines[this.index];
     const sp = SPEAKERS[who];
+    const hero = this.heroName();
     this.face.textContent = sp.face;
     this.face.style.background = sp.color;
-    this.name.textContent = sp.name;
+    this.name.textContent = fillName(sp.name, hero);
     this.name.style.color = sp.color;
-    this.full = text;
+    this.full = fillName(text, hero);
     this.shown = 0;
     this.text.textContent = '';
     this.root.classList.toggle('narration', who === 'story');

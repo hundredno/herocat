@@ -35,9 +35,10 @@ export class Player {
     this.root.add(this.arc);
   }
 
-  equip(weapon, helmet) {
+  equip(weapon, helmet, armor) {
     this.cat.setWeapon(weapon);
     this.cat.setHelmet(helmet);
+    this.cat.setArmor(armor);
   }
 
   place(x, z, facing = Math.PI) {

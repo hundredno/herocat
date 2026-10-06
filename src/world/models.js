@@ -107,6 +107,8 @@ export function catModel(look = CAT_LOOKS.pip) {
   const helmetSlot = new Group();
   helmetSlot.position.set(0, 1.28, 0.42);
   body.add(helmetSlot);
+  const armorSlot = new Group();
+  body.add(armorSlot);
 
   let walk = 0;
   return {
@@ -115,6 +117,7 @@ export function catModel(look = CAT_LOOKS.pip) {
     arm,
     weaponSlot,
     helmetSlot,
+    armorSlot,
     setWeapon(id) {
       if (weaponSlot.userData.id === id) return;
       weaponSlot.userData.id = id;
@@ -128,6 +131,13 @@ export function catModel(look = CAT_LOOKS.pip) {
       disposeModel(helmetSlot);
       helmetSlot.clear();
       if (id) helmetSlot.add(helmetModel(id));
+    },
+    setArmor(id) {
+      if (armorSlot.userData.id === id) return;
+      armorSlot.userData.id = id;
+      disposeModel(armorSlot);
+      armorSlot.clear();
+      if (id) armorSlot.add(armorModel(id));
     },
     /** move: 0..1 how fast we're walking. */
     update(dt, t, move) {
@@ -158,6 +168,35 @@ export function weaponModel(id) {
         b.box(0.32, 0.06, 0.08, 0xd4a017, { p: [0, 0, 0.16] });
         b.box(0.05, 0.14, 0.8, 0xc7ced4, { p: [0, 0, 0.58] });
         b.cone(0.07, 0.24, 4, 0xc7ced4, { p: [0, 0, 1.1], r: [PI / 2, 0, 0], s: [0.7, 1, 1.4] });
+        break;
+      case 'fishbone':
+        b.cyl(0.04, 0.04, 0.95, 5, 0x8b5a2b, { p: [0, 0, 0.3], r: [PI / 2, 0, 0] });
+        b.cyl(0.025, 0.025, 0.55, 4, 0xf5f0e1, { p: [0, 0, 1.0], r: [PI / 2, 0, 0] });
+        for (let i = 0; i < 4; i++) b.box(0.3 - i * 0.05, 0.03, 0.03, 0xebe3cc, { p: [0, 0, 0.82 + i * 0.12] });
+        b.cone(0.1, 0.24, 4, 0xf5f0e1, { p: [0, 0, 1.38], r: [PI / 2, 0, 0], s: [1.2, 1, 0.7] });
+        b.box(0.03, 0.03, 0.03, 0x2d3436, { p: [0.05, 0.03, 1.3] });
+        for (const x of [-1, 1]) b.box(0.1, 0.03, 0.14, 0xebe3cc, { p: [x * 0.07, 0, 0.74], r: [0, x * 0.6, 0] });
+        break;
+      case 'hammer':
+        b.cyl(0.045, 0.045, 0.85, 6, 0x5b3a1e, { p: [0, 0, 0.33], r: [PI / 2, 0, 0] });
+        b.box(0.42, 0.26, 0.26, 0x7f8c8d, { p: [0, 0, 0.82], faceVary: 0.08, grad: [0.85, 1.1] });
+        b.box(0.43, 0.27, 0.07, 0xffe066, { p: [0, 0, 0.82], glow: true });
+        b.box(0.08, 0.08, 0.08, 0xffe066, { p: [0, 0.17, 0.82], r: [0, PI / 4, 0], glow: true });
+        break;
+      case 'crystal':
+        b.cyl(0.05, 0.05, 0.24, 6, 0x2d3436, { p: [0, 0, 0.02], r: [PI / 2, 0, 0] });
+        b.box(0.34, 0.06, 0.08, 0x8e44ad, { p: [0, 0, 0.16] });
+        b.box(0.07, 0.15, 0.95, 0x7ee8fa, { p: [0, 0, 0.68], glow: true });
+        b.cone(0.08, 0.26, 4, 0x7ee8fa, { p: [0, 0, 1.28], r: [PI / 2, 0, 0], s: [0.75, 1, 1.4], glow: true });
+        b.octa(0.05, 0xffffff, { p: [0, 0, 0.16], glow: true });
+        break;
+      case 'sunfire':
+        b.cyl(0.05, 0.05, 0.26, 6, 0x6d4c41, { p: [0, 0, 0.02], r: [PI / 2, 0, 0] });
+        b.box(0.44, 0.08, 0.1, 0xf1c40f, { p: [0, 0, 0.17] });
+        b.octa(0.07, 0xff5e1a, { p: [0, 0, 0.17], glow: true });
+        b.box(0.08, 0.17, 1.15, 0xffb142, { p: [0, 0, 0.8], glow: true });
+        b.box(0.09, 0.05, 1.0, 0xfff3b0, { p: [0, 0, 0.78], glow: true });
+        b.cone(0.09, 0.3, 4, 0xffb142, { p: [0, 0, 1.52], r: [PI / 2, 0, 0], s: [0.75, 1, 1.4], glow: true });
         break;
       case 'moonsteel':
         b.cyl(0.05, 0.05, 0.26, 6, 0x2c2c54, { p: [0, 0, 0.02], r: [PI / 2, 0, 0] });
@@ -194,6 +233,58 @@ export function helmetModel(id) {
         }
         b.octa(0.06, 0xe84393, { p: [0, 0.08, 0.3], glow: true });
         break;
+    }
+  });
+}
+
+/** Body armor: a shell around the cat's torso (torso spans y 0.38..0.82, z -0.41..0.41). */
+export function armorModel(id) {
+  return model((b) => {
+    const shell = (color, o = {}) => b.box(0.7, 0.42, 0.72, color, { p: [0, 0.63, -0.05], ...o });
+    switch (id) {
+      case 'sweater':
+        shell(0x74b9ff, { grad: [0.85, 1.05] });
+        for (const y of [0.52, 0.7]) b.box(0.72, 0.05, 0.74, 0xffffff, { p: [0, y, -0.05] });
+        b.box(0.72, 0.08, 0.2, 0x0984e3, { p: [0, 0.78, 0.26] });
+        break;
+      case 'leather':
+        shell(0x9c6b3c, { grad: [0.8, 1.05], faceVary: 0.05 });
+        b.box(0.72, 0.07, 0.74, 0x4a2c14, { p: [0, 0.5, -0.05] });
+        for (const x of [-0.17, 0.17]) b.box(0.08, 0.02, 0.74, 0x4a2c14, { p: [x, 0.85, -0.05] });
+        b.box(0.1, 0.09, 0.03, 0xd4a017, { p: [0.36, 0.5, 0.05], r: [0, PI / 2, 0] });
+        break;
+      case 'chain':
+        shell(0x9aa3ab, { faceVary: 0.18 });
+        b.box(0.24, 0.03, 0.74, 0xc0392b, { p: [0, 0.85, -0.05] });
+        for (const x of [-1, 1]) b.sphere(0.15, 6, 4, 0x7f8c8d, { p: [x * 0.34, 0.8, 0.16], s: [1, 0.7, 1] });
+        break;
+      case 'crystal':
+        shell(0x48b5c9, { grad: [0.75, 1.1] });
+        for (let i = 0; i < 3; i++) b.cone(0.08, 0.32 - i * 0.05, 4, 0x9ef0ff, { p: [0, 0.95, 0.08 - i * 0.2], r: [-0.3, 0, 0], glow: true });
+        for (const x of [-1, 1]) b.octa(0.13, 0x9ef0ff, { p: [x * 0.36, 0.8, 0.16], glow: true });
+        break;
+      case 'sun':
+        shell(0xf1c40f, { grad: [0.8, 1.1] });
+        b.cyl(0.15, 0.15, 0.03, 10, 0xff9f1c, { p: [0, 0.85, -0.12], glow: true });
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * PI * 2;
+          b.box(0.05, 0.02, 0.1, 0xffe066, { p: [Math.sin(a) * 0.23, 0.85, -0.12 + Math.cos(a) * 0.23], r: [0, a, 0], glow: true });
+        }
+        for (const x of [-1, 1]) b.sphere(0.16, 7, 4, 0xf9d342, { p: [x * 0.35, 0.8, 0.16], s: [1, 0.7, 1] });
+        break;
+    }
+  });
+}
+
+/** Flat golden double chevron lying on the ground, pointing along +z. */
+export function arrowModel() {
+  return model((b) => {
+    for (const z of [0.25, -0.2]) {
+      for (const x of [-1, 1]) {
+        const o = { r: [0, -x * (PI / 4), 0] };
+        b.box(0.34, 0.02, 0.78, 0x5a3300, { ...o, p: [x * 0.2, 0.08, z - 0.2], glow: true });
+        b.box(0.2, 0.02, 0.62, z > 0 ? 0xffd35c : 0xffb84d, { ...o, p: [x * 0.2, 0.1, z - 0.2], glow: true });
+      }
     }
   });
 }

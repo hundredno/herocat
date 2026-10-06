@@ -1,5 +1,5 @@
 // Storyline: who says what, and what the player should do next.
-// Lines are [speakerId, text] pairs.
+// Lines are [speakerId, text] pairs. {name} is the hero's name, chosen at the start.
 
 export const CAVES = [
   { id: 'cave1', name: 'Rat Burrow', side: 'left', boss: 'brute' },
@@ -9,7 +9,7 @@ export const CAVES = [
 
 export const SPEAKERS = {
   story: { name: 'Story', face: '📜', color: '#6c5ce7' },
-  pip: { name: 'Pip', face: '🐱', color: '#f39c34' },
+  pip: { name: '{name}', face: '🐱', color: '#f39c34' },
   elder: { name: 'Elder Mittens', face: '😺', color: '#7f8c8d' },
   biscuit: { name: 'Biscuit', face: '😸', color: '#e17055' },
   smith: { name: 'Smith Whiskers', face: '😼', color: '#8d6e63' },
@@ -19,6 +19,9 @@ export const SPEAKERS = {
   brute: { name: 'Big Rat Brute', face: '🐀', color: '#8e6e53' },
   queen: { name: 'Spider Queen', face: '🕷️', color: '#6c3483' },
 };
+
+/** Puts the hero's name into a line of story text. */
+export const fillName = (text, name) => text.replaceAll('{name}', name);
 
 /** Cave i opens once i Sun Gems are back in the Lantern Tower. */
 export const isCaveUnlocked = (s, i) => s.gemsPlaced >= i;
@@ -51,17 +54,18 @@ export const SCRIPTS = {
     ['story', 'But last night, Gnawfang the Rat King crept in and stole all three Sun Gems!'],
     ['gnawfang', 'Squee-hee-hee! The shiny gems are MINE now! I hid them in my three caves. No silly cat will ever get them back!'],
     ['story', 'Without the Sun Gems, Whiskerwood grows colder and darker every day…'],
-    ['elder', 'Pip! You may be small, but you have the bravest heart in all of Whiskerwood.'],
+    ['elder', '{name}! You may be small, but you have the bravest heart in all of Whiskerwood.'],
     ['elder', 'Take my old Bamboo Sword. On your own you deal 5 damage, and the sword adds +1. That makes 6!'],
     ['elder', 'The 1st Sun Gem is in the Rat Burrow, the cave on the left. Monsters drop gold coins when you beat them.'],
-    ['elder', "Spend your gold at Biscuit's shop to train your HP and damage, and to buy better weapons and helmets."],
+    ['elder', "Spend your gold at Biscuit's shop to train your HP and damage, and to buy better weapons, helmets and armor."],
+    ['elder', 'And if you ever feel lost, follow the golden arrow at your feet. It always points to your next goal.'],
     ['pip', "I'll bring all three Sun Gems home. HeroCat is on the job!"],
   ],
 
   caveIntro: [
     [['pip', "It smells like old cheese in here… Rats! I'll find that Sun Gem."]],
     [['pip', 'Glowing crystals… and sticky webs. I hope the spiders here are friendly.'], ['pip', '(They are not.)']],
-    [['pip', 'The Deep Dark. Gnawfang must be waiting at the very end.'], ['pip', 'Deep breath, Pip. You can do this.']],
+    [['pip', 'The Deep Dark. Gnawfang must be waiting at the very end.'], ['pip', 'Deep breath, {name}. You can do this.']],
   ],
 
   bossIntro: {
@@ -93,14 +97,14 @@ export const SCRIPTS = {
     ],
     [
       ['gnawfang', 'My gems! My beautiful shiny gems! …FINE! Keep them! Keep my crown too! I never want to see a cat again!'],
-      ['story', 'Gnawfang ran away squeaking. Pip found the last Sun Gem and the Golden Crown-Helm!'],
+      ['story', 'Gnawfang ran away squeaking. {name} found the last Sun Gem and the Golden Crown-Helm!'],
       ['pip', 'The last Sun Gem! Whiskerwood, here I come!'],
     ],
   ],
 
   gemPlaced: [
     [
-      ['elder', 'The 1st Sun Gem! Look, Pip, the sky is already brighter!'],
+      ['elder', 'The 1st Sun Gem! Look, {name}, the sky is already brighter!'],
       ['elder', 'Did you hear that rumble? The boulder in front of Crystal Hollow, the middle cave, has rolled away.'],
       ['elder', "Spiders live in Crystal Hollow and they bite hard. Train at Biscuit's shop if you need to."],
     ],
@@ -110,9 +114,9 @@ export const SCRIPTS = {
       ['elder', 'He is VERY strong. Try to train your HP and damage to level 4 before you face him!'],
     ],
     [
-      ['story', 'Pip placed the last Sun Gem in the Lantern Tower…'],
+      ['story', '{name} placed the last Sun Gem in the Lantern Tower…'],
       ['story', 'The tower blazed with golden light, and warmth flowed back into every corner of Whiskerwood!'],
-      ['elder', 'You did it, Pip! You are a true hero. From today, everyone will call you… HeroCat!'],
+      ['elder', 'You did it, {name}! You are a true hero. From today, everyone will call you… HeroCat!'],
       ['biscuit', 'Free fish snacks for HeroCat, forever!'],
       ['pip', "Hooray! And if any more monsters show up, I'll be ready!"],
     ],
@@ -124,7 +128,7 @@ export const SCRIPTS = {
     ['smith', "Visit me there and I'll forge you an Iron Claw-Blade and an Iron Helm!"],
   ],
 
-  shopGreeting: [['biscuit', 'Welcome! Gold for training, gold for gear. Whatever makes you stronger, Pip!']],
+  shopGreeting: [['biscuit', 'Welcome! Gold for training, gold for gear. Whatever makes you stronger, {name}!']],
 };
 
 export function elderLines(s) {
@@ -147,13 +151,13 @@ export function elderLines(s) {
 const VILLAGER_LINES = {
   tom: [
     "Brrr! It's so cold since the Sun Gems vanished. My whiskers are frozen!",
-    "It's a bit warmer now. Thanks, Pip!",
+    "It's a bit warmer now. Thanks, {name}!",
     'My whiskers have thawed! Go get that last gem!',
     'HeroCat! HeroCat! Can I have your pawtograph?',
   ],
   luna: [
     'Beat monsters to get gold, then visit Biscuit. Training makes you stronger for good!',
-    'Tip: hold the attack button to keep swinging your sword.',
+    'Lost? Follow the golden arrow on the ground. It knows the way!',
     'Hurt? Touch the fountain to heal all your HP.',
     'The village has never looked so bright!',
   ],

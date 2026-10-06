@@ -1,4 +1,4 @@
-import { DAMAGE_BONUS, HELMETS, HP_BONUS, MAX_LEVEL, UPGRADE_COSTS, WEAPONS } from './balance.js';
+import { ARMOR, DAMAGE_BONUS, HELMETS, HP_BONUS, MAX_LEVEL, UPGRADE_COSTS, WEAPONS } from './balance.js';
 
 export const STATS = {
   hp: { key: 'hpLevel', bonus: HP_BONUS, label: 'Health', unit: 'HP' },
@@ -8,10 +8,45 @@ export const STATS = {
 const KINDS = {
   weapon: { items: WEAPONS, owned: 'weapons', equipped: 'weapon', power: (it) => it.damage },
   helmet: { items: HELMETS, owned: 'helmets', equipped: 'helmet', power: (it) => it.hp },
+  armor: { items: ARMOR, owned: 'armors', equipped: 'armor', power: (it) => it.block },
+};
+export const GEAR_KINDS = Object.keys(KINDS);
+
+export const KILLS_FOR_HAMMER = 75;
+
+/** What it takes before the shop will sell an item (balance.js items name these by id). */
+export const UNLOCKS = {
+  brute: { test: (s) => s.gemsFound >= 1, hint: () => 'Beat the Big Rat Brute' },
+  smith: { test: (s) => s.smithRescued, hint: () => 'Rescue Smith Whiskers in Crystal Hollow' },
+  kills75: {
+    test: (s) => s.kills >= KILLS_FOR_HAMMER,
+    hint: (s) => `Defeat ${KILLS_FOR_HAMMER} monsters (${Math.min(s.kills, KILLS_FOR_HAMMER)}/${KILLS_FOR_HAMMER})`,
+  },
+  queen: { test: (s) => s.gemsFound >= 2, hint: () => 'Beat the Spider Queen' },
+  saved: { test: (s) => s.finished, hint: () => 'Save Whiskerwood' },
 };
 
 export const catalog = (kind) => KINDS[kind].items;
 export const itemPower = (kind, id) => KINDS[kind].power(KINDS[kind].items[id]);
+
+export function isUnlocked(s, kind, id) {
+  const rule = KINDS[kind].items[id].unlock;
+  return !rule || UNLOCKS[rule].test(s);
+}
+
+export function unlockHint(s, kind, id) {
+  const rule = KINDS[kind].items[id].unlock;
+  return rule ? UNLOCKS[rule].hint(s) : '';
+}
+
+/** Ids ("kind:id") of shop items that are unlocked right now; diff two of these to announce new ones. */
+export function unlockedForSale(s) {
+  const out = new Set();
+  for (const kind of GEAR_KINDS) {
+    for (const [id, it] of Object.entries(KINDS[kind].items)) if (it.price !== null && it.unlock && isUnlocked(s, kind, id)) out.add(`${kind}:${id}`);
+  }
+  return out;
+}
 
 /** Gold to go from `level` to `level + 1`, or null at max level. */
 export function upgradeCost(level) {
@@ -41,7 +76,7 @@ export function canBuy(s, kind, id) {
   const item = KINDS[kind].items[id];
   if (owns(s, kind, id)) return { ok: false, reason: 'owned' };
   if (item.price === null) return { ok: false, reason: 'notForSale' };
-  if (item.needsSmith && !s.smithRescued) return { ok: false, reason: 'locked', cost: item.price };
+  if (!isUnlocked(s, kind, id)) return { ok: false, reason: 'locked', cost: item.price, hint: unlockHint(s, kind, id) };
   if (s.gold < item.price) return { ok: false, reason: 'gold', cost: item.price };
   return { ok: true, cost: item.price };
 }

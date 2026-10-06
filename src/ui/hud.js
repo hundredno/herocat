@@ -9,6 +9,7 @@ export class Hud {
         <div class="hp-row">${ICON.heart}<div class="hp-bar"><div class="hp-fill"></div><span class="hp-text"></span></div></div>
         <div class="chips">
           <span class="chip" title="Damage">${ICON.sword}<b class="dmg"></b></span>
+          <span class="chip" title="Armor: share of every hit it blocks">${ICON.shield}<b class="block"></b></span>
           <span class="chip" title="Gold">${ICON.coin}<b class="gold"></b></span>
           <span class="chip" title="Sun Gems returned">${ICON.gem}<b class="gems"></b></span>
         </div>
@@ -27,6 +28,7 @@ export class Hud {
     this.hpText = q('.hp-text');
     this.hpBar = q('.hp-bar');
     this.dmg = q('.dmg');
+    this.block = q('.block');
     this.gold = q('.gold');
     this.goldChip = this.gold.parentElement;
     this.gems = q('.gems');
@@ -59,14 +61,16 @@ export class Hud {
     apply(value, prev);
   }
 
-  update({ hp, maxHp, damage, gold, gems, objective }) {
-    this.set('hp', `${Math.ceil(hp)}/${maxHp}`, (v, prev) => {
+  update({ hp, maxHp, damage, block, gold, gems, objective }) {
+    // Keyed on the exact HP (armor makes it fractional); the text shows whole hearts.
+    this.set('hp', `${hp}/${maxHp}`, (v, prev) => {
       this.hpText.textContent = `${Math.ceil(hp)} / ${maxHp}`;
       this.hpFill.style.transform = `scaleX(${Math.max(0, hp / maxHp)})`;
       this.hpBar.classList.toggle('low', hp / maxHp <= 0.3);
-      if (prev && parseInt(prev, 10) > hp) this.bump(this.hpBar, 'hurt');
+      if (prev && parseFloat(prev) > hp) this.bump(this.hpBar, 'hurt');
     });
     this.set('dmg', damage, (v) => (this.dmg.textContent = v));
+    this.set('block', block, (v) => (this.block.textContent = `${Math.round(v * 100)}%`));
     this.set('gold', gold, (v, prev) => {
       this.gold.textContent = v;
       if (prev !== undefined && v > prev) this.bump(this.goldChip, 'bump');

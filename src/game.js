@@ -3,20 +3,22 @@ import { FollowCamera } from './engine/camera.js';
 import { Input } from './engine/input.js';
 import { startLoop } from './engine/loop.js';
 import { createRenderer } from './engine/renderer.js';
-import { HELMETS, PLAYER, SUN_GEM_COLORS, WEAPONS } from './game/balance.js';
-import { goldAfterFainting, inAttackArc, rollGold, splitCoins } from './game/combat.js';
-import { grantItem } from './game/economy.js';
+import { GuideArrow } from './game/arrow.js';
+import { PLAYER, SUN_GEM_COLORS } from './game/balance.js';
+import { damageTaken, formatDamage, goldAfterFainting, inAttackArc, rollGold, splitCoins } from './game/combat.js';
+import { catalog, grantItem, unlockedForSale } from './game/economy.js';
 import { Particles } from './game/effects.js';
 import { Enemy } from './game/enemies.js';
 import { Coins } from './game/pickups.js';
 import { Player } from './game/player.js';
-import { clearSave, loadGame, maxHp, newState, saveGame, totalDamage } from './game/state.js';
+import { Respawns } from './game/respawn.js';
+import { cleanName, clearSave, damageBlock, loadGame, maxHp, newState, saveGame, totalDamage } from './game/state.js';
 import { CAVES, SCRIPTS, objective } from './game/story.js';
 import { Dialogue } from './ui/dialogue.js';
 import { el } from './ui/dom.js';
 import { Floaters } from './ui/floaters.js';
 import { Hud } from './ui/hud.js';
-import { creditsView, faintView, pauseView } from './ui/menu.js';
+import { creditsView, faintView, helpView, pauseView } from './ui/menu.js';
 import { Panel } from './ui/panel.js';
 import { heroView, shopView } from './ui/shop.js';
 import { gemModel } from './world/models.js';
@@ -49,7 +51,7 @@ class Game {
       onPause: () => this.openPause(),
       onAction: () => this.input.press('Action'),
     });
-    this.dialogue = new Dialogue(ui);
+    this.dialogue = new Dialogue(ui, () => this.state.name);
     this.panel = new Panel(ui);
 
     this.state = loadGame() ?? newState();
@@ -58,6 +60,8 @@ class Game {
     this.coins = new Coins();
     this.particles = new Particles();
     this.enemies = [];
+    this.respawns = new Respawns();
+    this.arrow = new GuideArrow();
     this.village = createVillage();
     this.caves = [];
     this.level = null;
@@ -70,6 +74,7 @@ class Game {
     this.saveTimer = 0;
     this.deadTimer = 0;
     this.lastMax = maxHp(this.state);
+    this.unlocked = unlockedForSale(this.state);
     this.setMode('title');
 
     window.addEventListener('resize', () => this.resize());
@@ -80,7 +85,7 @@ class Game {
     });
     window.addEventListener('pagehide', () => this.save());
 
-    this.player.equip(this.state.weapon, this.state.helmet);
+    this.player.equip(this.state.weapon, this.state.helmet, this.state.armor);
     this.setLevel(this.village, 'start');
     this.resize();
     startLoop((dt) => this.frame(dt));
@@ -88,14 +93,17 @@ class Game {
 
   // ------------------------------------------------------------ flow
 
-  async start(fresh) {
+  /** fresh: wipe the save and begin a new game as `name`. */
+  async start(fresh, name) {
     if (this.started) return;
     if (fresh) {
       clearSave();
       this.state = newState();
+      this.state.name = cleanName(name);
     }
     this.started = true;
     const s = this.state;
+    this.unlocked = unlockedForSale(s);
     this.onGearChanged();
     this.player.revive(maxHp(s));
     await this.transition(() => {
@@ -108,12 +116,11 @@ class Game {
       await this.say(SCRIPTS.prologue);
       s.introSeen = true;
       this.save();
-      this.toast(
-        this.input.touchMode
-          ? 'Drag on the left to move · Tap ⚔ to attack · Tap the orange button to talk'
-          : 'Move: WASD / arrows · Attack: Space or click · Talk: E',
-        5500,
-      );
+    }
+    if (!s.helpSeen) {
+      await this.showHelp();
+      s.helpSeen = true;
+      this.save();
     }
     setTimeout(() => CAVE_LOADERS.forEach((load) => load().catch(() => {})), 1500);
   }
@@ -171,13 +178,15 @@ class Game {
     this.waits = [];
     for (const e of this.enemies) e.dispose();
     this.enemies = [];
+    this.respawns.clear();
     this.boss = null;
     this.player.hold(null);
 
     this.level = level;
     level.scene.add(this.player.root, this.coins.mesh, this.particles.mesh);
     level.onEnter(this);
-    for (const sp of level.enemySpawns) this.spawnEnemy(sp.type, sp.x, sp.z);
+    this.arrow.attach(level);
+    for (const sp of level.enemySpawns) this.spawnEnemy(sp.type, sp.x, sp.z, { spawn: sp });
     if (level.boss && this.state.gemsFound <= level.def.index) this.spawnEnemy(level.boss.type, level.boss.x, level.boss.z);
     const [x, z, facing] = level.spawns[spawn] ?? level.spawns.start;
     this.player.place(x, z, facing);
@@ -190,11 +199,18 @@ class Game {
     this.gfx.settle();
   }
 
-  spawnEnemy(type, x, z) {
-    const e = new Enemy(type, x, z);
+  spawnEnemy(type, x, z, opts) {
+    const e = new Enemy(type, x, z, opts);
     this.enemies.push(e);
     this.level.scene.add(e.root);
     return e;
+  }
+
+  /** A defeated rat or bat comes back where it first stood. */
+  respawnEnemy(sp) {
+    const e = this.spawnEnemy(sp.type, sp.x, sp.z, { spawn: sp, appear: true });
+    this.level.collision.resolve(e);
+    this.particles.burst(e.x, 0.5, e.z, { count: 12, color: 0xa29bfe, speed: 3, up: 2, life: 0.5, size: 0.16 });
   }
 
   applyFog() {
@@ -275,6 +291,7 @@ class Game {
     if (this.mode !== 'title') this.camera.follow(this.player.x, this.player.z, dt);
 
     this.level.update(dt, t, this);
+    this.arrow.update(dt, t, this);
     this.player.animate(dt, t);
     for (const e of this.enemies) e.animate(dt, t);
     this.particles.update(dt);
@@ -359,6 +376,7 @@ class Game {
       this.enemies = list.filter((e) => !e.gone);
     }
 
+    this.respawns.update(h, (sp) => this.respawnEnemy(sp));
     const gold = this.coins.update(h, p);
     if (gold) this.addGold(gold);
     if (this.mode === 'play') this.checkInteractables();
@@ -398,6 +416,7 @@ class Game {
       hp: this.player.hp,
       maxHp: maxHp(s),
       damage: totalDamage(s),
+      block: damageBlock(s),
       gold: s.gold,
       gems: s.gemsPlaced,
       objective: objective(s),
@@ -444,15 +463,19 @@ class Game {
     this.particles.burst(e.x, 0.6, e.z, { count: e.boss ? 40 : 14, color: 0xdfe6e9, speed: 4, up: 3, life: 0.6, size: e.boss ? 0.3 : 0.18, spread: e.radius });
     this.state.kills++;
     this.dirty = true;
+    this.respawns.add(e);
+    // A boss announces new shop items after its cutscene instead.
     if (e.boss) this.onBossDefeated(e);
+    else this.checkUnlocks();
   }
 
   damagePlayer(dmg, src) {
     const p = this.player;
     if (p.dead || p.iframes > 0) return;
-    p.hp = Math.max(0, p.hp - dmg);
+    const taken = damageTaken(dmg, damageBlock(this.state));
+    p.hp = Math.max(0, Math.round((p.hp - taken) * 1000) / 1000);
     p.iframes = PLAYER.iframes;
-    this.floaters.text(`-${dmg}`, p.x, 1.9, p.z, 'hurt');
+    this.floaters.text(`-${formatDamage(taken)}`, p.x, 1.9, p.z, 'hurt');
     this.camera.shake(0.45, 0.25);
     this.particles.burst(p.x, 0.9, p.z, { count: 8, color: 0xff6b6b, speed: 3, life: 0.4 });
     const d = Math.hypot(p.x - src.x, p.z - src.z) || 1;
@@ -507,6 +530,7 @@ class Game {
     await this.say(SCRIPTS.bossDefeated[index]);
     p.hold(null);
     this.level.showBossPortal?.();
+    this.checkUnlocks();
   }
 
   faint() {
@@ -557,6 +581,7 @@ class Game {
     const n = s.gemsPlaced++;
     this.save();
     this.village.refresh(s);
+    this.arrow.invalidate();
     this.particles.burst(0, 5.5, -3, { count: 40, color: SUN_GEM_COLORS[n], speed: 4, up: 3, life: 1, size: 0.16, gravity: 3 });
     if (n + 1 < 3) {
       const [bx, bz] = this.village.boulderPositions[n + 1];
@@ -580,7 +605,7 @@ class Game {
     this.level.openChestLid();
     const { kind, id, gold, goldIfOwned } = def.chest;
     const res = grantItem(s, kind, id, 0);
-    const name = (kind === 'weapon' ? WEAPONS : HELMETS)[id].name;
+    const name = catalog(kind)[id].name;
     const [cx, cz] = [this.player.x, this.player.z];
     this.coins.spawn(cx, cz, splitCoins(gold + (res.item ? 0 : goldIfOwned)));
     this.particles.burst(cx, 1, cz, { count: 24, color: 0xffd35c, speed: 3, up: 3, life: 0.8, size: 0.14 });
@@ -597,14 +622,30 @@ class Game {
     await this.say(SCRIPTS.smithRescue);
     this.state.smithRescued = true;
     this.level.hideSmith();
+    this.arrow.invalidate();
     this.particles.burst(this.player.x, 1, this.player.z, { count: 20, color: 0xf5f6fa, speed: 3, up: 2, life: 0.6, size: 0.14 });
     this.toast("Smith Whiskers went home. New iron gear is for sale at Biscuit's shop!", 4000);
     this.save();
+    this.unlocked = unlockedForSale(this.state); // the toast above already announced these
+  }
+
+  /** Toasts shop items that just became available (bosses beaten, monsters defeated, …). */
+  checkUnlocks() {
+    const now = unlockedForSale(this.state);
+    const fresh = [...now].filter((k) => !this.unlocked.has(k));
+    this.unlocked = now;
+    if (!fresh.length) return;
+    const names = fresh.map((k) => {
+      const [kind, id] = k.split(':');
+      return catalog(kind)[id].name;
+    });
+    const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+    this.toast(`New at Biscuit's shop: ${list}!`, 4500);
   }
 
   onGearChanged() {
     const s = this.state;
-    this.player.equip(s.weapon, s.helmet);
+    this.player.equip(s.weapon, s.helmet, s.armor);
     const max = maxHp(s);
     const gained = max - this.lastMax;
     this.lastMax = max;
@@ -635,15 +676,26 @@ class Game {
     this.openPanel(pauseView(this));
   }
 
+  /** The full "How to play" screen; resolves when the player closes it. */
+  showHelp() {
+    return new Promise((resolve) => {
+      this.openPanel(helpView(this, { first: true, onClose: resolve }));
+      if (!this.panel.open) resolve();
+    });
+  }
+
   closePanel() {
     if (this.panel.open) this.panel.close();
     if (this.mode === 'panel') this.setMode('play');
+    this.checkUnlocks();
   }
 
   startOver() {
     this.panel.close();
     clearSave();
+    const name = this.state.name;
     this.state = newState();
+    this.state.name = name;
     this.bossIntroShown.clear();
     this.lastMax = maxHp(this.state);
     this.onGearChanged();

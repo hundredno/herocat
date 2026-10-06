@@ -1,4 +1,4 @@
-import { ICON } from './dom.js';
+import { ICON, escapeHtml } from './dom.js';
 
 // Pause menu, help, start-over confirmation, faint screen and credits.
 
@@ -35,28 +35,49 @@ export function pauseView(game) {
   };
 }
 
-export function helpView(game) {
+const kbd = (...keys) => keys.map((k) => `<kbd>${k}</kbd>`).join(' ');
+
+const CONTROLS = {
+  keys: [
+    ['Move', `${kbd('W', 'A', 'S', 'D')} or ${kbd('↑', '←', '↓', '→')}`],
+    ['Attack', `${kbd('Space')} ${kbd('J')} or left click <small>(hold to keep swinging)</small>`],
+    ['Talk · use · open', `${kbd('E')} or ${kbd('Enter')}`],
+    ['Hero &amp; gear', kbd('B')],
+    ['Pause &amp; menu', `${kbd('Esc')} or ${kbd('P')}`],
+    ['Story text', `${kbd('Space')} next · ${kbd('Esc')} skip`],
+  ],
+  touch: [
+    ['Move', 'Drag your thumb on the <b>left half</b> of the screen'],
+    ['Attack', 'Hold the <b>red sword button</b>, or tap the right half <small>(hold to keep swinging)</small>'],
+    ['Talk · use · open', 'Tap the <b>orange button</b> that pops up'],
+    ['Hero &amp; gear', `The ${ICON.bag} button, top right`],
+    ['Pause &amp; menu', `The ${ICON.pause} button, top right`],
+    ['Story text', 'Tap the text box · <b>Skip</b> to jump ahead'],
+  ],
+};
+
+/** Every control plus how to win. first: shown when a game starts (one big "Let's go!" button). */
+export function helpView(game, { first = false, onClose } = {}) {
   const touch = document.body.classList.contains('touch');
-  const controls = touch
-    ? `<li><b>Move:</b> drag your thumb on the left side of the screen</li>
-       <li><b>Attack:</b> tap or hold the sword button (or the right side of the screen)</li>
-       <li><b>Talk / use:</b> tap the button that pops up</li>`
-    : `<li><b>Move:</b> WASD or arrow keys</li>
-       <li><b>Attack:</b> Space, J or left click (hold to keep swinging)</li>
-       <li><b>Talk / use:</b> E or Enter</li>
-       <li><b>Hero &amp; Gear:</b> B &nbsp; <b>Pause:</b> Esc</li>`;
+  const rows = CONTROLS[touch ? 'touch' : 'keys'].map(([what, how]) => `<tr><th>${what}</th><td>${how}</td></tr>`).join('');
   return {
-    className: 'menu',
-    render: () => `<header><h2>How to play</h2><button class="x" data-act="close" aria-label="Close">✕</button></header>
-      <ul class="help">${controls}
+    className: 'menu help-view',
+    render: () => `<header><h2>How to play</h2>${first ? '' : '<button class="x" data-act="close" aria-label="Close">✕</button>'}</header>
+      <h3>Controls</h3>
+      <table class="controls">${rows}</table>
+      <h3>How to win</h3>
+      <ul class="help">
+        <li>Follow the <b style="color:#ffd35c">golden arrow</b> at your feet. It always points to your next goal.</li>
         <li>A <b style="color:#ff6b6b">red circle</b> under a monster means it is about to attack. Step out before it fills!</li>
-        <li>Beat monsters for <b>gold coins</b>. Spend gold at Biscuit's shop to train HP and damage (up to level 7) and to buy gear.</li>
-        <li>The fountain in the village heals you completely.</li>
-        <li>Your progress saves automatically.</li>
+        <li>Beat monsters for <b>gold coins</b>. Spend gold at Biscuit's shop on training, weapons, helmets and armor.</li>
+        <li>The fountain in the village heals you completely. Your progress saves automatically.</li>
       </ul>
-      <button class="big" data-act="back">◀ Back</button>`,
+      ${first ? '<button class="big" data-act="close">Let\'s go!</button>' : '<button class="big" data-act="back">◀ Back</button>'}`,
     onAction: (act) => act === 'back' && game.panel.show(pauseView(game)),
-    onClose: () => game.closePanel(),
+    onClose: () => {
+      game.closePanel();
+      onClose?.();
+    },
   };
 }
 
@@ -91,7 +112,7 @@ export function creditsView(game) {
     className: 'menu credits',
     closable: false,
     render: () => `<header><h2>Whiskerwood is saved!</h2></header>
-      <p class="intro">All three Sun Gems shine in the Lantern Tower again, thanks to <b>Pip the HeroCat</b>.</p>
+      <p class="intro">All three Sun Gems shine in the Lantern Tower again, thanks to <b>${escapeHtml(game.state.name)} the HeroCat</b>.</p>
       <div class="stat-cards">
         <div class="card">${ICON.sword}<div><b>${game.state.kills}</b><small>monsters defeated</small></div></div>
         <div class="card">${ICON.coin}<div><b>${game.state.gold}</b><small>gold in your pocket</small></div></div>

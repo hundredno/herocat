@@ -236,6 +236,12 @@ export function createVillage() {
     ]),
   ];
 
+  // Where the guide arrow can lead; r = how close counts as "there" (the arrow hides).
+  const goals = {
+    tower: { x: tx, z: tz, r: 3.6 },
+    ...Object.fromEntries(CAVE_X.map((cx, i) => [`cave${i}`, { x: cx, z: CLIFF_Z + 0.5, r: 2.2 }])),
+  };
+
   const bg = new Color();
   const mood = { level: 0, target: 0 };
 
@@ -271,6 +277,8 @@ export function createVillage() {
     enemySpawns: [],
     labels,
     interactables,
+    bounds: { minX: -23, minZ: CLIFF_Z, maxX: 23, maxZ: 13.5 },
+    goal: (id) => goals[id] ?? null,
     titleCenter: [0, -2],
     /** Sync everything that depends on story progress. */
     refresh(state, instant = false) {

@@ -5,13 +5,15 @@ import { ENEMIES } from './balance.js';
 import { angleDiff, angleTo } from './combat.js';
 
 const rand = (a, b) => a + Math.random() * (b - a);
+const APPEAR_TIME = 0.5;
 
 /**
  * Enemy AI: idle (wander) → chase → windup (red circle fills) → strike → recover → chase…
  * Walk out of the red circle before it fills to dodge.
  */
 export class Enemy {
-  constructor(type, x, z) {
+  /** opts.spawn: map spawn point it came from (respawns go back there); opts.appear: grow in first. */
+  constructor(type, x, z, opts = {}) {
     const def = ENEMIES[type];
     this.type = type;
     this.def = def;
@@ -33,6 +35,8 @@ export class Enemy {
     this.deadTime = 0;
     this.summonsLeft = def.summon ? [...def.summon.at] : [];
     this.speedMul = 1;
+    this.spawn = opts.spawn ?? null;
+    this.appear = opts.appear ? APPEAR_TIME : 0;
 
     this.model = enemyModel(type);
     this.root = new Group();
@@ -73,6 +77,11 @@ export class Enemy {
     if (this.dead) {
       this.deadTime += dt;
       if (this.deadTime > 0.35) this.gone = true;
+      return;
+    }
+    if (this.appear > 0) {
+      // Just popped back in: no moving or biting until fully grown.
+      this.appear = Math.max(0, this.appear - dt);
       return;
     }
 
@@ -208,6 +217,11 @@ export class Enemy {
     if (this.dead) {
       const s = Math.max(0.01, 1 - this.deadTime / 0.35);
       this.model.root.scale.set(1 + (1 - s) * 0.5, s, 1 + (1 - s) * 0.5);
+    } else if (this.appear > 0) {
+      const k = 1 - this.appear / APPEAR_TIME;
+      this.model.root.scale.setScalar(Math.max(0.05, k * (2 - k)));
+    } else if (this.model.root.scale.x !== 1) {
+      this.model.root.scale.setScalar(1);
     }
   }
 

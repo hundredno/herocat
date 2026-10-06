@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { newState } from '../src/game/state.js';
-import { CAVES, SCRIPTS, SPEAKERS, isCaveUnlocked, objective } from '../src/game/story.js';
+import { CAVES, SCRIPTS, SPEAKERS, fillName, isCaveUnlocked, objective, villagerLines } from '../src/game/story.js';
 
 describe('story progression', () => {
   it('opens caves one Sun Gem at a time', () => {
@@ -34,5 +34,13 @@ describe('story progression', () => {
     expect(lines.length).toBeGreaterThan(20);
     for (const [who] of lines) expect(SPEAKERS[who], who).toBeTruthy();
     expect(CAVES).toHaveLength(3);
+  });
+
+  it("uses the player's chosen name instead of a fixed one", () => {
+    const text = JSON.stringify([SCRIPTS, SPEAKERS, [0, 1, 2, 3].map((n) => villagerLines('tom', { gemsPlaced: n }))]);
+    expect(text).not.toMatch(/\bPip\b/);
+    expect(text).toMatch(/\{name\}/);
+    expect(fillName(SCRIPTS.prologue[4][1], 'Mochi')).toMatch(/^Mochi! /);
+    expect(fillName(SPEAKERS.pip.name, 'Mochi')).toBe('Mochi');
   });
 });

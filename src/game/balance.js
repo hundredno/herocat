@@ -11,18 +11,32 @@ export const HP_BONUS = [0, 5, 10, 20, 35, 55, 80];
 export const DAMAGE_BONUS = [0, 2, 4, 7, 11, 16, 22];
 
 // price: null means it can't be bought, only found.
+// unlock: id of a rule in economy.js UNLOCKS; the shop sells the item only once the rule passes.
 export const WEAPONS = {
   bamboo: { name: 'Bamboo Sword', damage: 1, price: null, source: 'A gift from Elder Mittens' },
-  club: { name: 'Wooden Club', damage: 3, price: 80, source: "Sold at Biscuit's shop" },
-  claw: { name: 'Iron Claw-Blade', damage: 6, price: 300, needsSmith: true, source: 'Forged by Smith Whiskers' },
+  club: { name: 'Wooden Club', damage: 3, price: 150, source: "Sold at Biscuit's shop" },
+  fishbone: { name: 'Fishbone Spear', damage: 4, price: 350, unlock: 'brute', source: "Sold at Biscuit's shop" },
+  claw: { name: 'Iron Claw-Blade', damage: 6, price: 750, unlock: 'smith', source: 'Forged by Smith Whiskers' },
+  hammer: { name: 'Thunder Hammer', damage: 8, price: 1200, unlock: 'kills75', source: 'Forged by Smith Whiskers' },
+  crystal: { name: 'Crystal Sword', damage: 10, price: 2000, unlock: 'queen', source: 'Cut from Crystal Hollow gems' },
   moonsteel: { name: 'Moonsteel Sword', damage: 12, price: null, source: 'Hidden in a chest in the Deep Dark' },
+  sunfire: { name: 'Sunfire Blade', damage: 18, price: 6000, unlock: 'saved', source: 'Forged with Sun Gem light' },
 };
 
 export const HELMETS = {
   leaf: { name: 'Leaf Cap', hp: 3, price: null, source: 'Hidden in a chest in the Rat Burrow' },
   acorn: { name: 'Acorn Helm', hp: 8, price: 200, source: "Sold at Biscuit's shop" },
-  iron: { name: 'Iron Helm', hp: 15, price: 600, needsSmith: true, source: 'Forged by Smith Whiskers' },
+  iron: { name: 'Iron Helm', hp: 15, price: 600, unlock: 'smith', source: 'Forged by Smith Whiskers' },
   crown: { name: 'Golden Crown-Helm', hp: 30, price: null, source: "Gnawfang's treasure" },
+};
+
+// block: share of every hit the armor stops (0.25 = a 4-damage bite only takes 3 HP).
+export const ARMOR = {
+  sweater: { name: 'Knitted Sweater', block: 0.1, price: 150, source: "Knitted by Biscuit's grandma" },
+  leather: { name: 'Leather Vest', block: 0.15, price: 400, unlock: 'brute', source: "Sold at Biscuit's shop" },
+  chain: { name: 'Iron Chainmail', block: 0.25, price: 1000, unlock: 'smith', source: 'Forged by Smith Whiskers' },
+  crystal: { name: 'Crystal Plate', block: 0.35, price: 2200, unlock: 'queen', source: 'Cut from Crystal Hollow gems' },
+  sun: { name: 'Sunguard Armor', block: 0.5, price: 6500, unlock: 'saved', source: 'Forged with Sun Gem light' },
 };
 
 export const PLAYER = {
@@ -42,9 +56,10 @@ export const FAINT_GOLD_KEPT = 0.5;
 
 // range: distance at which the enemy stops to wind up.
 // reach: radius of the red attack circle; standing inside it when it fills = hit.
+// respawn: seconds until a defeated one comes back at its spawn point (while you stay in the cave).
 export const ENEMIES = {
-  rat: { name: 'Cave Rat', hp: 12, dmg: 1, gold: [5, 8], speed: 2.8, radius: 0.45, aggro: 7, range: 1.1, reach: 1.6, windup: 0.6, recover: 0.9 },
-  bat: { name: 'Bat', hp: 8, dmg: 2, gold: [6, 10], speed: 3.6, radius: 0.4, aggro: 8, range: 1.0, reach: 1.5, windup: 0.5, recover: 1.0, flying: true },
+  rat: { name: 'Cave Rat', hp: 18, dmg: 2, gold: [5, 8], speed: 3.0, radius: 0.45, aggro: 7, range: 1.1, reach: 1.6, windup: 0.55, recover: 0.9, respawn: 10 },
+  bat: { name: 'Bat', hp: 13, dmg: 2, gold: [6, 10], speed: 3.9, radius: 0.4, aggro: 8, range: 1.0, reach: 1.5, windup: 0.45, recover: 1.0, flying: true, respawn: 10 },
   slime: { name: 'Slime', hp: 30, dmg: 3, gold: [15, 20], speed: 2.2, radius: 0.55, aggro: 7, range: 1.2, reach: 1.8, windup: 0.7, recover: 0.9 },
   spider: { name: 'Spider', hp: 45, dmg: 5, gold: [25, 35], speed: 3.8, radius: 0.55, aggro: 8, range: 1.2, reach: 1.8, windup: 0.55, recover: 0.8 },
   ratGuard: { name: 'Rat Guard', hp: 40, dmg: 6, gold: [20, 30], speed: 3.2, radius: 0.5, aggro: 9, range: 1.2, reach: 1.8, windup: 0.6, recover: 0.8 },

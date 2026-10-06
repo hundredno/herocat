@@ -19,15 +19,17 @@ export class Panel {
       const btn = e.target.closest('[data-act]');
       if (!btn || btn.disabled || !this.view) return;
       if (btn.dataset.act === 'close') this.close();
-      else this.view.onAction?.(btn.dataset.act, btn.dataset);
+      else this.view.onAction?.(btn.dataset.act, btn.dataset, btn);
     });
+    // Forms (the rename box) submit through their button's data-act click; never navigate.
+    this.box.addEventListener('submit', (e) => e.preventDefault());
   }
 
   get open() {
     return this.view !== null;
   }
 
-  /** view: { render: () => html, onAction(act, data), onClose(), closable, className } */
+  /** view: { render: () => html, onAction(act, data, button), afterRender(box), onClose(), closable, className } */
   show(view) {
     const wasOpen = this.open;
     this.view = view;
@@ -43,6 +45,7 @@ export class Panel {
     const scroll = this.box.scrollTop;
     this.box.innerHTML = this.view.render();
     this.box.scrollTop = scroll;
+    this.view.afterRender?.(this.box);
   }
 
   close() {
