@@ -86,6 +86,7 @@ export class Player {
       this.swing = 0;
       this.hitDone = false;
       this.cooldown = PLAYER.attackCooldown;
+      game.sound.play('swing');
     }
     if (this.swing >= 0) {
       this.swing += dt;

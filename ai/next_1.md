@@ -20,7 +20,7 @@ The shop now has tabs (Training · Weapons · Helmets · Armor). A green dot mar
 
 | Check | Result |
 |---|---|
-| Unit tests (`npm test`) | 59 pass. New ones cover: prices and unlock rules, armor, damage-taken math, name cleaning, old saves loading, respawn timing, arrow goals, and the nav grid. The nav grid tests include following the arrow from the entrance to the boss in all 3 real cave maps. |
+| Unit tests (`npm test`) | 62 pass. New ones cover: prices and unlock rules, armor, damage-taken math, name cleaning, old saves loading, respawn timing, arrow goals, and the nav grid. The nav grid tests include following the arrow from the entrance to the boss in all 3 real cave maps. |
 | E2E (`npm run test:e2e`) | 6 pass (desktop + Pixel 7). They cover: name entry, how-to-play, HUD, rename with HTML escaping, and Continue not re-showing help. The shop test walks the cat to Biscuit's stall and checks tabs, lock hints and buying armor. |
 | Initial download (`npm run size`) | **171.8 KB gzipped** (budget 200, was 165.9) |
 | Load time, 3 runs each, mobile throttling (150 ms RTT, 1.6 Mbps, 4× CPU) | Before: title usable **0.52 s**, world ready **2.08 s**. After: **0.52 s / 2.07 s**. No measurable change. `next_0` reported 0.3 s / 1.7 s under a lighter throttle profile. |
@@ -45,6 +45,29 @@ These were checked visually in the dev build:
 - **HUD:** the HP bar now redraws on the exact HP value, since armor makes HP fractional. The text still shows whole numbers.
 - **Name length:** the input box limits names to 12 characters. Emoji count as 2, so at most 6 emoji fit.
 
+## Bug fix found after implementation: the Rat Burrow boss was unreachable
+
+This bug dates back to v1. A rock (`o`) in cave 1, row 9, column 11 sat in the only opening into the corridor to the boss room. Wall corners on both sides left about a 0.56-unit gap, but the hero is 0.9 wide. The old test only checked tile connectivity, where a rock tile counts as open floor, so it missed this.
+
+- **Fix:** the rock moved 5 tiles west (row 9, column 6), into the open part of the same room.
+- **Shared collision:** collision setup moved into `caveCollision(map)` in `src/world/cave.js`, which the game and the tests now share.
+- **Prevention:** `tests/caves.test.js` now checks that a hero-sized walker can reach the boss, chest, smith and exit in every cave, with all rocks, crystals and braziers in place. The arrow walk test in `tests/guide.test.js` uses the same real collision.
+
+## Added after plan 1: sound effects (chat request)
+
+All sounds are synthesized with the Web Audio API in `src/engine/audio.js`, so there are no audio files. They add about 3 KB to the download (174.9 KB total).
+
+- **When audio starts:** browsers only allow sound after the player taps or presses a key, so the audio engine starts on the first input.
+- **The 26 sounds:**
+  - **Combat:** swing, hit, boss hit, defeat, boss defeat, hurt, faint, boss slam, boss roar, summon or respawn pop. A soft "warning" sound plays when a monster starts winding up, so you can hear when to step away; bosses get a deeper one.
+  - **Rewards:** coin pickups, which climb in pitch when you grab several in a row; chest; Sun Gem; placing a gem; fountain heal; level up; buy; equip; new items unlocked; and an ending fanfare.
+  - **Interface:** button click; a "no" buzz at locked caves; a whoosh on level changes; and dialogue blips, with a different voice pitch per character (narration is silent).
+- **Distance:** sounds in the world get quieter, and pan left or right, with distance from the hero. Ones more than 24 units away are skipped.
+- **Overlapping sounds:** each sound has a minimum gap between repeats, so many coins or rats at once don't pile up.
+- **Volume balance:** each sound was rendered offline in Chrome and its peak measured. Combat sounds peak at 0.2–0.45 of full scale, big moments around 0.5, interface sounds about 0.1, and blips 0.06. With 10 loud sounds stacked, the limiter keeps the peak at 0.86, so nothing clips.
+- **Sound on/off:** press **M**, or use **Pause → Sound On/Off**. The choice is remembered per device in `localStorage` (`herocat.sound`), separate from the save. Audio is suspended while the tab is hidden.
+- **Tests:** `tests/audio.test.js` runs every recipe against a fake Web Audio API to catch values browsers reject. It also checks that every sound the code plays exists, and that every sound is used.
+
 ## Next steps (suggested priority)
 
 1. **Playtest the balance with a real player.** All numbers are in `src/game/balance.js`. Things to watch:
@@ -61,7 +84,7 @@ These were checked visually in the dev build:
 4. **More respawns?** Slimes, spiders and golems can respawn by adding `respawn: <seconds>` to their entry in `balance.js`.
 5. **Small existing CSS bug:** `#ui button { font: inherit }` overrides `.big { font-weight: 800 }`, so "Let's go!" and the pause-menu buttons render at normal weight.
 6. **Carried over from next_0:**
-   - sound effects and a mute toggle;
+   - background music (sound effects are done);
    - bosses can hide the hero;
    - Cloudflare login and deploy;
    - accessibility (focus trap in panels, `aria-live` toasts);

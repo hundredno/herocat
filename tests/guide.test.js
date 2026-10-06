@@ -3,7 +3,7 @@ import { CollisionWorld } from '../src/engine/collision.js';
 import { NavGrid } from '../src/engine/navgrid.js';
 import { guideGoals } from '../src/game/guide.js';
 import { newState } from '../src/game/state.js';
-import { TILE, parseMap } from '../src/world/cave.js';
+import { TILE, caveCollision, parseMap } from '../src/world/cave.js';
 import { DEF as cave1 } from '../src/world/caves/cave1.js';
 import { DEF as cave2 } from '../src/world/caves/cave2.js';
 import { DEF as cave3 } from '../src/world/caves/cave3.js';
@@ -71,20 +71,12 @@ describe('nav grid', () => {
   });
 });
 
-/** Walls of a cave map as collision boxes, laid out exactly like buildCave(). */
+/** A cave's real collision (walls, rocks, crystals, …) and where its map letters are. */
 function caveWalls(def) {
   const m = parseMap(def.map);
-  const col = new CollisionWorld(4);
-  const wx = (i) => (i - m.w / 2 + 0.5) * TILE;
-  const wz = (j) => (j - m.h / 2 + 0.5) * TILE;
+  const { collision: col } = caveCollision(m);
   const at = {};
-  for (let j = 0; j < m.h; j++) {
-    for (let i = 0; i < m.w; i++) {
-      const c = m.at(i, j);
-      if (c === '#') col.addBox(wx(i) - TILE / 2, wz(j) - TILE / 2, wx(i) + TILE / 2, wz(j) + TILE / 2);
-      else at[c] = { x: wx(i), z: wz(j) };
-    }
-  }
+  for (let j = 0; j < m.h; j++) for (let i = 0; i < m.w; i++) at[m.at(i, j)] = { x: m.wx(i), z: m.wz(j) };
   const bounds = { minX: (-m.w * TILE) / 2, minZ: (-m.h * TILE) / 2, maxX: (m.w * TILE) / 2, maxZ: (m.h * TILE) / 2 };
   return { col, at, bounds };
 }
@@ -98,6 +90,7 @@ describe.each([cave1, cave2, cave3])('following the arrow through $name', (def) 
     let steps = 0;
     while (Math.hypot(hero.x - at.B.x, hero.z - at.B.z) > 5 && steps < 3000) {
       const next = nav.next(hero.x, hero.z);
+      expect(next, `no path at ${hero.x.toFixed(1)}, ${hero.z.toFixed(1)}`).not.toBeNull();
       const d = Math.hypot(next.x - hero.x, next.z - hero.z) || 1;
       hero.x += ((next.x - hero.x) / d) * 0.15;
       hero.z += ((next.z - hero.z) / d) * 0.15;

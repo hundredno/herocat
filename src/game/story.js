@@ -7,17 +7,18 @@ export const CAVES = [
   { id: 'cave3', name: 'The Deep Dark', side: 'right', boss: 'gnawfang' },
 ];
 
+// voice: pitch (Hz) of their dialogue blips
 export const SPEAKERS = {
-  story: { name: 'Story', face: '📜', color: '#6c5ce7' },
-  pip: { name: '{name}', face: '🐱', color: '#f39c34' },
-  elder: { name: 'Elder Mittens', face: '😺', color: '#7f8c8d' },
-  biscuit: { name: 'Biscuit', face: '😸', color: '#e17055' },
-  smith: { name: 'Smith Whiskers', face: '😼', color: '#8d6e63' },
-  tom: { name: 'Tom', face: '🙀', color: '#2d3436' },
-  luna: { name: 'Luna', face: '😻', color: '#b2bec3' },
-  gnawfang: { name: 'Gnawfang the Rat King', face: '🐀', color: '#c0392b' },
-  brute: { name: 'Big Rat Brute', face: '🐀', color: '#8e6e53' },
-  queen: { name: 'Spider Queen', face: '🕷️', color: '#6c3483' },
+  story: { name: 'Story', face: '📜', color: '#6c5ce7', voice: null }, // narration is silent
+  pip: { name: '{name}', face: '🐱', color: '#f39c34', voice: 740 },
+  elder: { name: 'Elder Mittens', face: '😺', color: '#7f8c8d', voice: 330 },
+  biscuit: { name: 'Biscuit', face: '😸', color: '#e17055', voice: 560 },
+  smith: { name: 'Smith Whiskers', face: '😼', color: '#8d6e63', voice: 400 },
+  tom: { name: 'Tom', face: '🙀', color: '#2d3436', voice: 620 },
+  luna: { name: 'Luna', face: '😻', color: '#b2bec3', voice: 880 },
+  gnawfang: { name: 'Gnawfang the Rat King', face: '🐀', color: '#c0392b', voice: 170 },
+  brute: { name: 'Big Rat Brute', face: '🐀', color: '#8e6e53', voice: 210 },
+  queen: { name: 'Spider Queen', face: '🕷️', color: '#6c3483', voice: 290 },
 };
 
 /** Puts the hero's name into a line of story text. */

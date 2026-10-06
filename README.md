@@ -48,6 +48,6 @@ label in the corner (`v.xxxx`) is the first 4 characters of the commit being bui
 | `src/main.js` | Tiny entry: title screen + version label, loads the game chunk |
 | `src/game.js` | Game loop, modes, level switching, story/combat glue |
 | `src/game/` | Pure rules: `balance.js` (all numbers: gear, armor, enemies), `state.js` (save), `economy.js` (shop + unlock rules), `combat.js`, `story.js` (script + objectives), `guide.js` (where the arrow points), `respawn.js`; plus player/enemy/coin/particle/guide-arrow entities |
-| `src/engine/` | Renderer + adaptive quality, input (keys/touch), camera, collision, nav grid (arrow pathing), geometry builder |
+| `src/engine/` | Renderer + adaptive quality, input (keys/touch), camera, collision, nav grid (arrow pathing), geometry builder, `audio.js` (synthesized sound effects, no audio files) |
 | `src/world/` | Procedural models, village, cave builder; `caves/caveN.js` are ASCII maps (lazy-loaded) |
 | `src/ui/` | HUD, dialogue, shop/hero/menu panels, floating numbers |

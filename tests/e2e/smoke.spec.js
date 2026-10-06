@@ -33,7 +33,7 @@ test('a new game asks for a name, shows how to play, and starts with 10 HP and 6
   // then every control is shown before you can move
   const panel = page.locator('.panel');
   await expect(panel).toContainText('How to play');
-  await expect(panel.locator('.controls tr')).toHaveCount(6);
+  await expect(panel.locator('.controls tr')).toHaveCount(7);
   await expect(panel).toContainText('golden arrow');
   await panel.getByRole('button', { name: "Let's go!" }).click();
   await expect(page.locator('.panel-wrap')).toBeHidden();

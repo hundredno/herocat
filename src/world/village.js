@@ -232,7 +232,17 @@ export function createVillage() {
     { kind: 'zone', x: fx, z: fz, r: 3.2, action: (g) => g.healAtFountain() },
     ...CAVE_X.flatMap((cx, i) => [
       { kind: 'trigger', x: cx, z: CLIFF_Z + 0.5, r: 0.95, when: (g) => isCaveUnlocked(g.state, i), action: (g) => g.enterCave(i) },
-      { kind: 'trigger', x: cx, z: CLIFF_Z + 2.2, r: 2.6, when: (g) => !isCaveUnlocked(g.state, i), action: (g) => g.toast(LOCKED_HINTS[i]) },
+      {
+        kind: 'trigger',
+        x: cx,
+        z: CLIFF_Z + 2.2,
+        r: 2.6,
+        when: (g) => !isCaveUnlocked(g.state, i),
+        action: (g) => {
+          g.sound.play('deny');
+          g.toast(LOCKED_HINTS[i]);
+        },
+      },
     ]),
   ];
 

@@ -1,4 +1,5 @@
 import './ui/ui.css';
+import { Sound } from './engine/audio.js';
 import { FollowCamera } from './engine/camera.js';
 import { Input } from './engine/input.js';
 import { startLoop } from './engine/loop.js';
@@ -51,7 +52,10 @@ class Game {
       onPause: () => this.openPause(),
       onAction: () => this.input.press('Action'),
     });
-    this.dialogue = new Dialogue(ui, () => this.state.name);
+    this.sound = new Sound();
+    this.dialogue = new Dialogue(ui, () => this.state.name, (voice) => this.sound.play('blip', { voice }));
+    // a soft tick for every on-screen button (menus, HUD, shop)
+    ui.addEventListener('click', (e) => e.target.closest('button') && this.sound.play('click'));
     this.panel = new Panel(ui);
 
     this.state = loadGame() ?? newState();
@@ -134,6 +138,7 @@ class Game {
   async transition(work) {
     this.setMode('transition');
     this.input.reset();
+    this.sound.play('whoosh');
     this.fade.classList.add('on');
     await sleep(320);
     try {
@@ -210,6 +215,7 @@ class Game {
   respawnEnemy(sp) {
     const e = this.spawnEnemy(sp.type, sp.x, sp.z, { spawn: sp, appear: true });
     this.level.collision.resolve(e);
+    this.sound.play('pop', { x: e.x, z: e.z });
     this.particles.burst(e.x, 0.5, e.z, { count: 12, color: 0xa29bfe, speed: 3, up: 2, life: 0.5, size: 0.16 });
   }
 
@@ -289,6 +295,8 @@ class Game {
         break;
     }
     if (this.mode !== 'title') this.camera.follow(this.player.x, this.player.z, dt);
+    this.sound.listener.x = this.player.x;
+    this.sound.listener.z = this.player.z;
 
     this.level.update(dt, t, this);
     this.arrow.update(dt, t, this);
@@ -306,6 +314,7 @@ class Game {
 
   handleKeys() {
     const inp = this.input;
+    if (this.mode !== 'title' && inp.wasPressed('KeyM')) this.toggleSound();
     if (this.mode === 'play') {
       if (inp.wasPressed('Escape', 'KeyP')) this.openPause();
       else if (inp.wasPressed('KeyB', 'KeyI')) this.openHero();
@@ -378,7 +387,10 @@ class Game {
 
     this.respawns.update(h, (sp) => this.respawnEnemy(sp));
     const gold = this.coins.update(h, p);
-    if (gold) this.addGold(gold);
+    if (gold) {
+      this.addGold(gold);
+      this.sound.play('coin');
+    }
     if (this.mode === 'play') this.checkInteractables();
   }
 
@@ -444,16 +456,19 @@ class Game {
   playerAttack() {
     const p = this.player;
     const dmg = totalDamage(this.state);
-    let hit = false;
+    let hit = null;
     for (const e of this.enemies) {
       if (e.dead || !inAttackArc(p.x, p.z, p.facing, e.x, e.z, e.radius, PLAYER.attackRange, PLAYER.attackHalfArc)) continue;
-      hit = true;
+      if (!hit || e.boss) hit = e;
       const killed = e.hit(dmg, p.x, p.z);
       this.floaters.text(String(dmg), e.x, (e.def.flying ? 1.7 : 1.1) + e.radius, e.z);
       this.particles.burst(e.x, e.def.flying ? 1.2 : 0.7, e.z, { count: 6, speed: 3.5, life: 0.3, size: 0.1, up: 1.5 });
       if (killed) this.onEnemyDefeated(e);
     }
-    if (hit) this.camera.shake(0.12, 0.1);
+    if (hit) {
+      this.camera.shake(0.12, 0.1);
+      this.sound.play(hit.boss ? 'bossHit' : 'hit', { x: hit.x, z: hit.z });
+    }
   }
 
   onEnemyDefeated(e) {
@@ -463,6 +478,7 @@ class Game {
     this.particles.burst(e.x, 0.6, e.z, { count: e.boss ? 40 : 14, color: 0xdfe6e9, speed: 4, up: 3, life: 0.6, size: e.boss ? 0.3 : 0.18, spread: e.radius });
     this.state.kills++;
     this.dirty = true;
+    this.sound.play(e.boss ? 'bossDefeat' : 'defeat', { x: e.x, z: e.z });
     this.respawns.add(e);
     // A boss announces new shop items after its cutscene instead.
     if (e.boss) this.onBossDefeated(e);
@@ -475,6 +491,7 @@ class Game {
     const taken = damageTaken(dmg, damageBlock(this.state));
     p.hp = Math.max(0, Math.round((p.hp - taken) * 1000) / 1000);
     p.iframes = PLAYER.iframes;
+    this.sound.play('hurt');
     this.floaters.text(`-${formatDamage(taken)}`, p.x, 1.9, p.z, 'hurt');
     this.camera.shake(0.45, 0.25);
     this.particles.burst(p.x, 0.9, p.z, { count: 8, color: 0xff6b6b, speed: 3, life: 0.4 });
@@ -487,14 +504,21 @@ class Game {
   onAggro(e) {
     if (!e.boss) return;
     this.boss = e;
+    this.sound.play('roar', { x: e.x, z: e.z });
     if (!this.bossIntroShown.has(e.type)) {
       this.bossIntroShown.add(e.type);
       this.say(SCRIPTS.bossIntro[e.type]);
     }
   }
 
+  /** A monster starts its attack (the red circle appears). */
+  onWindup(e) {
+    this.sound.play(e.boss ? 'warnBig' : 'warn', { x: e.x, z: e.z });
+  }
+
   onBossSlam(e) {
     this.camera.shake(0.5, 0.3);
+    this.sound.play('slam', { x: e.x, z: e.z });
     this.particles.burst(e.x, 0.2, e.z, { count: 16, color: 0xb2a593, speed: 6, up: 1.5, life: 0.5, size: 0.22, spread: e.def.reach });
   }
 
@@ -506,10 +530,12 @@ class Game {
       e.state = 'chase';
       this.particles.burst(e.x, 0.5, e.z, { count: 12, color: 0xa29bfe, speed: 3, up: 2, life: 0.5, size: 0.16 });
     }
+    this.sound.play('pop', { x: boss.x, z: boss.z });
     this.toast(`${boss.def.name} called for help!`, 1800);
   }
 
   onEnrage(e) {
+    this.sound.play('roar', { x: e.x, z: e.z });
     this.toast(`${e.def.name} is furious! Watch out!`, 2200);
     this.particles.burst(e.x, 1.5, e.z, { count: 24, color: 0xff4d4d, speed: 5, up: 3, life: 0.6, size: 0.2 });
   }
@@ -524,6 +550,7 @@ class Game {
     await this.wait(1);
     const p = this.player;
     p.hold(gemModel(SUN_GEM_COLORS[index], 0.32));
+    this.sound.play('gem');
     this.particles.burst(p.x, 2.2, p.z, { count: 30, color: SUN_GEM_COLORS[index], speed: 3, up: 3, life: 0.9, size: 0.14, gravity: 3 });
     this.floaters.text('Sun Gem!', p.x, 2.8, p.z, 'big');
     await this.wait(0.8);
@@ -534,6 +561,7 @@ class Game {
   }
 
   faint() {
+    this.sound.play('faint');
     this.player.dead = true;
     this.player.deadTime = 0;
     this.deadTimer = 1.3;
@@ -570,6 +598,7 @@ class Game {
     const max = maxHp(this.state);
     if (p.hp >= max) return;
     this.floaters.text(`+${Math.ceil(max - p.hp)}`, p.x, 1.9, p.z, 'heal');
+    this.sound.play('heal');
     p.hp = max;
     this.particles.burst(p.x, 0.4, p.z, { count: 18, color: 0x7bed9f, speed: 2, up: 3, life: 0.8, size: 0.12, gravity: 2 });
     this.toast('The fountain healed you!', 1600);
@@ -582,6 +611,7 @@ class Game {
     this.save();
     this.village.refresh(s);
     this.arrow.invalidate();
+    this.sound.play('gemPlaced');
     this.particles.burst(0, 5.5, -3, { count: 40, color: SUN_GEM_COLORS[n], speed: 4, up: 3, life: 1, size: 0.16, gravity: 3 });
     if (n + 1 < 3) {
       const [bx, bz] = this.village.boulderPositions[n + 1];
@@ -593,6 +623,7 @@ class Game {
     if (s.gemsPlaced >= 3 && !s.finished) {
       s.finished = true;
       this.save();
+      this.sound.play('fanfare');
       this.setMode('panel');
       this.panel.show(creditsView(this));
     }
@@ -606,6 +637,7 @@ class Game {
     const { kind, id, gold, goldIfOwned } = def.chest;
     const res = grantItem(s, kind, id, 0);
     const name = catalog(kind)[id].name;
+    this.sound.play('chest');
     const [cx, cz] = [this.player.x, this.player.z];
     this.coins.spawn(cx, cz, splitCoins(gold + (res.item ? 0 : goldIfOwned)));
     this.particles.burst(cx, 1, cz, { count: 24, color: 0xffd35c, speed: 3, up: 3, life: 0.8, size: 0.14 });
@@ -624,6 +656,7 @@ class Game {
     this.level.hideSmith();
     this.arrow.invalidate();
     this.particles.burst(this.player.x, 1, this.player.z, { count: 20, color: 0xf5f6fa, speed: 3, up: 2, life: 0.6, size: 0.14 });
+    this.sound.play('unlock');
     this.toast("Smith Whiskers went home. New iron gear is for sale at Biscuit's shop!", 4000);
     this.save();
     this.unlocked = unlockedForSale(this.state); // the toast above already announced these
@@ -640,7 +673,14 @@ class Game {
       return catalog(kind)[id].name;
     });
     const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+    this.sound.play('unlock');
     this.toast(`New at Biscuit's shop: ${list}!`, 4500);
+  }
+
+  toggleSound() {
+    this.sound.setEnabled(!this.sound.enabled);
+    this.toast(this.sound.enabled ? 'Sound on' : 'Sound off (press M or use the pause menu to turn it back on)', 1800);
+    this.panel.refresh();
   }
 
   onGearChanged() {

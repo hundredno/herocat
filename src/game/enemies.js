@@ -112,6 +112,7 @@ export class Enemy {
         if (dist <= def.range + p.radius) {
           this.state = 'windup';
           this.timer = def.windup / this.speedMul;
+          game.onWindup(this);
           break;
         }
         tx = p.x;

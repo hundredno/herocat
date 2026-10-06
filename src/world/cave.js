@@ -13,24 +13,59 @@ export const TILE = 2;
 //   o rock  * crystal  f brazier  m mushrooms  w web  l lava crack  (decoration)
 const ENEMY_KEYS = { r: 'rat', b: 'bat', s: 'slime', p: 'spider', g: 'golem', G: 'ratGuard' };
 
+// How solid each map prop is (collision circle radius). The smith's circle goes away once freed.
+const PROP_RADIUS = { C: 0.6, S: 0.6, o: 0.85, '*': 0.7, f: 0.5 };
+
 export function parseMap(text) {
   const rows = text.split('\n').filter((r) => r.trim().length);
   const w = Math.max(...rows.map((r) => r.length));
   const h = rows.length;
   const at = (i, j) => (i < 0 || j < 0 || i >= w || j >= h ? '#' : rows[j][i] || '#');
-  return { w, h, at, isFloor: (i, j) => at(i, j) !== '#' };
+  return {
+    w,
+    h,
+    at,
+    isFloor: (i, j) => at(i, j) !== '#',
+    // tile centre in world units
+    wx: (i) => (i - w / 2 + 0.5) * TILE,
+    wz: (j) => (j - h / 2 + 0.5) * TILE,
+  };
+}
+
+/** Walls that touch floor need geometry and collision; solid rock further in is never reached. */
+function nearFloor(map, i, j) {
+  for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (map.isFloor(i + di, j + dj)) return true;
+  return false;
+}
+
+/** Everything solid in a cave: walls plus rocks, crystals, braziers, the chest and the trapped smith. */
+export function caveCollision(map) {
+  const collision = new CollisionWorld(4);
+  let smith = null;
+  for (let j = 0; j < map.h; j++) {
+    for (let i = 0; i < map.w; i++) {
+      const c = map.at(i, j);
+      const x = map.wx(i);
+      const z = map.wz(j);
+      if (c === '#') {
+        if (nearFloor(map, i, j)) collision.addBox(x - TILE / 2, z - TILE / 2, x + TILE / 2, z + TILE / 2);
+      } else if (PROP_RADIUS[c]) {
+        const shape = collision.addCircle(x, z, PROP_RADIUS[c]);
+        if (c === 'S') smith = shape;
+      }
+    }
+  }
+  return { collision, smith };
 }
 
 export function buildCave(def) {
   const { palette: pal } = def;
   const rng = mulberry32(def.index * 977 + 13);
   const map = parseMap(def.map);
-  const { w, h, at, isFloor } = map;
-  const wx = (i) => (i - w / 2 + 0.5) * TILE;
-  const wz = (j) => (j - h / 2 + 0.5) * TILE;
+  const { w, h, at, isFloor, wx, wz } = map;
 
   const scene = new Scene();
-  const collision = new CollisionWorld(4);
+  const { collision, smith: smithCollider } = caveCollision(map);
   const b = new Builder(rng);
   const enemySpawns = [];
   const labels = [];
@@ -46,15 +81,12 @@ export function buildCave(def) {
       const x = wx(i);
       const z = wz(j);
       if (c === '#') {
-        let nearFloor = false;
-        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) if (isFloor(i + di, j + dj)) nearFloor = true;
-        if (!nearFloor) continue;
+        if (!nearFloor(map, i, j)) continue;
         // Walls between the camera (south) and the floor are kept low so they never hide the hero.
         const low = isFloor(i, j - 1);
         const H = low ? 0.7 : 2.8 + rng() * 0.8;
         b.box(TILE, H, TILE, pal.wall, { p: [x, H / 2, z], grad: [0.45, 1], faceVary: 0.07 });
         b.box(TILE, 0.12, TILE, pal.wallTop, { p: [x, H + 0.06, z], faceVary: 0.08 });
-        collision.addBox(x - TILE / 2, z - TILE / 2, x + TILE / 2, z + TILE / 2);
         continue;
       }
       b.quad(TILE, TILE, (i + j) % 2 ? pal.floor : pal.floor2, { p: [x, 0, z], faceVary: 0.05 });
@@ -72,14 +104,12 @@ export function buildCave(def) {
           break;
         case 'C':
           chestPos = [x, z];
-          collision.addCircle(x, z, 0.6);
           break;
         case 'S':
           smithPos = [x, z];
           break;
         case 'o':
           addRock(b, x, z, 1.5, pal.rock);
-          collision.addCircle(x, z, 0.85);
           break;
         case '*':
           for (let k = 0; k < 3; k++) {
@@ -87,14 +117,12 @@ export function buildCave(def) {
             const s = 0.6 + rng() * 0.6;
             b.cone(0.25 * s, 1.6 * s, 5, pal.crystal, { p: [x + Math.sin(a) * 0.3, 0.7 * s, z + Math.cos(a) * 0.3], r: [rng() * 0.5 - 0.25, a, rng() * 0.5 - 0.25], glow: true });
           }
-          collision.addCircle(x, z, 0.7);
           break;
         case 'f':
           b.cyl(0.45, 0.25, 0.5, 7, 0x5d5d5d, { p: [x, 0.5, z] });
           b.cyl(0.12, 0.12, 0.5, 5, 0x3d3d3d, { p: [x, 0.15, z] });
           b.cone(0.35, 0.7, 5, 0xff9f1c, { p: [x, 1.05, z], glow: true });
           b.cone(0.2, 0.5, 5, 0xffe066, { p: [x, 1.0, z], glow: true });
-          collision.addCircle(x, z, 0.5);
           break;
         case 'm':
           for (let k = 0; k < 3; k++) {
@@ -154,7 +182,6 @@ export function buildCave(def) {
   }
 
   let smith = null;
-  let smithCollider = null;
   if (smithPos) {
     smith = new Group();
     const cat = catModel(CAT_LOOKS.smith);
@@ -167,7 +194,6 @@ export function buildCave(def) {
     smith.position.set(smithPos[0], 0, smithPos[1]);
     smith.userData.cat = cat;
     scene.add(smith);
-    smithCollider = collision.addCircle(smithPos[0], smithPos[1], 0.6);
     interactables.push({
       kind: 'talk',
       x: smithPos[0],

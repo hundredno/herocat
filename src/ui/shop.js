@@ -106,6 +106,7 @@ function handleGear(game, act, data) {
   } else if (act === 'equip') {
     ok = equip(s, data.kind, data.id);
   }
+  if (ok) game.sound.play({ train: 'levelUp', buy: 'buy', equip: 'equip' }[act]);
   if (ok) game.onGearChanged();
 }
 

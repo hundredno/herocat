@@ -8,12 +8,15 @@ export function pauseView(game) {
     render() {
       const q = game.gfx.quality;
       const opt = (v, label) => `<button class="seg ${q === v ? 'on' : ''}" data-act="quality" data-v="${v}">${label}</button>`;
+      const snd = game.sound.enabled;
+      const sndOpt = (on, label) => `<button class="seg ${snd === on ? 'on' : ''}" data-act="sound" data-v="${on ? 'on' : 'off'}">${label}</button>`;
       return `<header><h2>Paused</h2><button class="x" data-act="close" aria-label="Close">✕</button></header>
         <div class="menu-list">
           <button class="big" data-act="close">▶ Resume</button>
           <button class="big" data-act="hero">${ICON.bag} Hero &amp; Gear</button>
           <button class="big" data-act="help">? How to play</button>
           <div class="setting"><span>Graphics</span><div class="segs">${opt('auto', 'Auto')}${opt('low', 'Fast')}${opt('high', 'Sharp')}</div></div>
+          <div class="setting"><span>Sound</span><div class="segs">${sndOpt(true, 'On')}${sndOpt(false, 'Off')}</div></div>
           ${document.fullscreenEnabled ? `<button class="big" data-act="fullscreen">⛶ ${document.fullscreenElement ? 'Exit full screen' : 'Full screen'}</button>` : ''}
           <button class="big danger" data-act="reset">↺ Start over</button>
         </div>`;
@@ -22,7 +25,10 @@ export function pauseView(game) {
       if (act === 'hero') game.openHero();
       else if (act === 'help') game.panel.show(helpView(game));
       else if (act === 'reset') game.panel.show(confirmResetView(game));
-      else if (act === 'quality') {
+      else if (act === 'sound') {
+        game.sound.setEnabled(data.v === 'on');
+        game.panel.refresh();
+      } else if (act === 'quality') {
         game.gfx.setQuality(data.v);
         game.panel.refresh();
       } else if (act === 'fullscreen') {
@@ -44,6 +50,7 @@ const CONTROLS = {
     ['Talk · use · open', `${kbd('E')} or ${kbd('Enter')}`],
     ['Hero &amp; gear', kbd('B')],
     ['Pause &amp; menu', `${kbd('Esc')} or ${kbd('P')}`],
+    ['Sound on / off', kbd('M')],
     ['Story text', `${kbd('Space')} next · ${kbd('Esc')} skip`],
   ],
   touch: [
@@ -52,6 +59,7 @@ const CONTROLS = {
     ['Talk · use · open', 'Tap the <b>orange button</b> that pops up'],
     ['Hero &amp; gear', `The ${ICON.bag} button, top right`],
     ['Pause &amp; menu', `The ${ICON.pause} button, top right`],
+    ['Sound on / off', `In the ${ICON.pause} menu`],
     ['Story text', 'Tap the text box · <b>Skip</b> to jump ahead'],
   ],
 };

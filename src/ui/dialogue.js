@@ -5,9 +5,14 @@ const CHARS_PER_SEC = 55;
 
 /** Story text box with a portrait and a typewriter effect. play() resolves when the player finishes reading. */
 export class Dialogue {
-  /** heroName: () => the player's chosen name, filled into {name} in lines and speaker labels. */
-  constructor(root, heroName = () => 'Pip') {
+  /**
+   * heroName: () => the player's chosen name, filled into {name} in lines and speaker labels.
+   * onType(voice): called every few letters while text types out (the speaker's "voice" blips).
+   */
+  constructor(root, heroName = () => 'Pip', onType = null) {
     this.heroName = heroName;
+    this.onType = onType;
+    this.voice = null;
     this.root = el('div', 'dialogue hidden');
     this.root.innerHTML = `
       <div class="dlg-face"></div>
@@ -48,6 +53,7 @@ export class Dialogue {
     this.face.style.background = sp.color;
     this.name.textContent = fillName(sp.name, hero);
     this.name.style.color = sp.color;
+    this.voice = sp.voice;
     this.full = fillName(text, hero);
     this.shown = 0;
     this.text.textContent = '';
@@ -56,7 +62,10 @@ export class Dialogue {
 
   update(dt) {
     if (!this.open || this.shown >= this.full.length) return;
+    const before = Math.floor(this.shown);
     this.shown = Math.min(this.full.length, this.shown + dt * CHARS_PER_SEC);
+    const now = Math.floor(this.shown);
+    if (this.voice && this.onType && Math.floor(now / 3) > Math.floor(before / 3) && /[\p{L}\p{N}]/u.test(this.full[now - 1])) this.onType(this.voice);
     this.text.textContent = this.full.slice(0, Math.floor(this.shown));
     this.root.classList.toggle('typing', this.shown < this.full.length);
   }
