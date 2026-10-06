@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="theme-color" content="#2a2342" />
+    <meta name="description" content="HeroCat! A tiny cat with a bamboo sword sets out to bring back the stolen Sun Gems. A 3D adventure that runs in your browser." />
+    <title>HeroCat!</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --font: ui-rounded, 'SF Pro Rounded', 'Nunito', 'Segoe UI', system-ui, -apple-system, Roboto, 'Helvetica Neue', Arial, sans-serif;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #2a2342;
+        overscroll-behavior: none;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+      }
+      #game {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        outline: none;
+      }
+      #ui {
+        z-index: 5;
+      }
+      #title {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        text-align: center;
+        font-family: var(--font);
+        color: #fff;
+        background: radial-gradient(ellipse at 50% 30%, #6c5ce7 0%, #3b2f6b 45%, #1d1733 100%);
+        transition: background 0.8s;
+      }
+      #title.ready {
+        background: linear-gradient(rgba(29, 23, 51, 0.15), rgba(29, 23, 51, 0.65));
+      }
+      #title h1 {
+        margin: 0;
+        font-size: clamp(56px, 15vmin, 128px);
+        font-weight: 900;
+        line-height: 0.95;
+        letter-spacing: -0.02em;
+        color: #ffd35c;
+        text-shadow: 0 4px 0 #c45f00, 0 8px 0 rgba(0, 0, 0, 0.25), 0 12px 30px rgba(0, 0, 0, 0.4);
+        -webkit-text-stroke: 3px #3b1d00;
+        paint-order: stroke fill;
+      }
+      #title h1 span {
+        color: #ff9f43;
+      }
+      .tagline {
+        margin: 18px 0 28px;
+        font-size: clamp(16px, 2.6vmin + 6px, 22px);
+        font-weight: 700;
+        text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+      }
+      .title-buttons {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+      }
+      #title button {
+        min-width: 240px;
+        padding: 14px 28px;
+        font: inherit;
+        font-size: 1.3em;
+        font-weight: 900;
+        color: #fff;
+        border: 3px solid #fff;
+        border-radius: 999px;
+        background: linear-gradient(#ffb15c, #ff8a1f);
+        box-shadow: 0 5px 0 #c45f00, 0 10px 20px rgba(0, 0, 0, 0.35);
+        cursor: pointer;
+      }
+      #title button.secondary {
+        font-size: 1em;
+        padding: 10px 22px;
+        min-width: 200px;
+        background: rgba(255, 255, 255, 0.15);
+        box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+      }
+      #title button:active {
+        transform: translateY(3px);
+      }
+      #title button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+      #title-status {
+        min-height: 1.4em;
+        margin: 18px auto 0;
+        max-width: 420px;
+        font-weight: 600;
+        opacity: 0.85;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.6);
+      }
+      #title-status.error {
+        color: #ffb3b3;
+        opacity: 1;
+      }
+      #fade {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        background: #000;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s;
+      }
+      #fade.on {
+        opacity: 1;
+        pointer-events: auto;
+      }
+      #version {
+        position: fixed;
+        right: calc(6px + env(safe-area-inset-right));
+        bottom: calc(4px + env(safe-area-inset-bottom));
+        z-index: 30;
+        font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        color: rgba(255, 255, 255, 0.55);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="game" aria-label="HeroCat game world"></canvas>
+    <div id="ui"></div>
+    <section id="title">
+      <div>
+        <h1>Hero<span>Cat</span>!</h1>
+        <p class="tagline">A tiny cat. A bamboo sword. A very big adventure.</p>
+        <div class="title-buttons">
+          <button id="btn-continue" hidden>Continue</button>
+          <button id="btn-new">New Game</button>
+        </div>
+        <p id="title-status">Loading the world…</p>
+      </div>
+    </section>
+    <div id="fade"></div>
+    <div id="version"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
