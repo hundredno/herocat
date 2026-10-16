@@ -1,7 +1,7 @@
 import { ARMOR, HELMETS, MAX_LEVEL, UPGRADE_COSTS, WEAPONS } from '../game/balance.js';
 import { STATS, buy, canBuy, canUpgrade, equip, owns, upgrade, upgradeCost } from '../game/economy.js';
 import { NAME_MAX, cleanName, damageBlock, damageParts, hpParts } from '../game/state.js';
-import { ICON, escapeHtml } from './dom.js';
+import { ICON, escapeHtml, formatDuration } from './dom.js';
 
 // Shop (training + gear for sale, in tabs) and the Hero panel (stats, name, equip what you own).
 
@@ -161,6 +161,7 @@ export function heroView(game) {
           <div class="card">${ICON.sword}<div><b>${dmg.total} damage</b><small>${dmg.base} base + ${dmg.training} training (Lv ${s.damageLevel}) + ${dmg.weapon} ${WEAPONS[s.weapon].name}</small></div></div>
           <div class="card">${ICON.shield}<div><b>Blocks ${pct(block)} of every hit</b><small>${s.armor ? ARMOR[s.armor].name : "No armor yet. Biscuit's shop sells some!"}</small></div></div>
           <div class="card">${ICON.gem}<div><b>${s.gemsPlaced} / 3 Sun Gems</b><small>returned to the Lantern Tower</small></div></div>
+          <div class="card">${ICON.star}<div><b>Adventure log</b><small>${formatDuration(s.playTime)} played · ${s.kills} monsters · ${s.goldEarned} gold earned · ${s.faints} ${s.faints === 1 ? 'faint' : 'faints'}</small></div></div>
         </div>
         ${ownedSection(s, 'weapon')}
         ${ownedSection(s, 'helmet')}

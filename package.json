@@ -10,6 +10,9 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "size": "node scripts/size-check.js",
+    "bot:playtest": "node scripts/record/playtest.js",
+    "record:youtube": "node scripts/record/record.js --video youtube --seed 10",
+    "record:short": "npm run record:youtube -- --dry && node scripts/record/record.js --video short --seed 7 --skip-build --save recordings/youtube-seed10/saves/save-deep-dark.json",
     "deploy": "npm run build && wrangler deploy"
   },
   "dependencies": {

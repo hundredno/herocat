@@ -162,8 +162,8 @@ export function buildCave(def) {
   let portalOpen = false;
 
   const interactables = [
-    { kind: 'trigger', x: exit[0], z: exit[1], r: 0.9, action: (g) => g.exitCave() },
-    { kind: 'trigger', x: boss?.x ?? 0, z: boss?.z ?? 0, r: 1.1, when: () => portalOpen, action: (g) => g.exitCave() },
+    { id: 'exit', kind: 'trigger', x: exit[0], z: exit[1], r: 0.9, action: (g) => g.exitCave() },
+    { id: 'portal', kind: 'trigger', x: boss?.x ?? 0, z: boss?.z ?? 0, r: 1.1, when: () => portalOpen, action: (g) => g.exitCave() },
   ];
 
   let chest = null;
@@ -172,6 +172,7 @@ export function buildCave(def) {
     chest.root.position.set(chestPos[0], 0, chestPos[1]);
     scene.add(chest.root);
     interactables.push({
+      id: 'chest',
       kind: 'trigger',
       x: chestPos[0],
       z: chestPos[1],
@@ -195,6 +196,7 @@ export function buildCave(def) {
     smith.userData.cat = cat;
     scene.add(smith);
     interactables.push({
+      id: 'smith',
       kind: 'talk',
       x: smithPos[0],
       z: smithPos[1],

@@ -207,6 +207,42 @@ export const SOUNDS = {
   blip: { vol: 7, gap: 0.045, play: (v, o) => v.tone('square', (o.voice ?? 600) * wobble(0.06), (o.voice ?? 600) * wobble(0.06), 0, 0.035, 0.035, { lp: 2500 }) },
 };
 
+/** Limiter + master volume + a second of white noise: the mix every sound goes through. */
+export function mixBus(ctx) {
+  // only squashes peaks when lots of sounds stack up (boss fight + coins + hits)
+  const limiter = ctx.createDynamicsCompressor();
+  limiter.threshold.value = -6;
+  limiter.knee.value = 6;
+  limiter.ratio.value = 10;
+  limiter.connect(ctx.destination);
+  const master = ctx.createGain();
+  master.gain.value = 0.8;
+  master.connect(limiter);
+  const noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+  const data = noiseBuf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  return { master, noiseBuf };
+}
+
+/**
+ * Schedules one sound at time t0 on any audio context (the live one, or an offline one for
+ * video recordings). gain/pan come from where it happened. state carries the coin combo.
+ */
+export function renderSound(ctx, dest, noiseBuf, name, opts, gain, pan, t0, state) {
+  const def = SOUNDS[name];
+  const out = ctx.createGain();
+  out.gain.value = gain * (def.vol ?? 1);
+  if (pan && ctx.createStereoPanner) {
+    const p = ctx.createStereoPanner();
+    p.pan.value = pan;
+    out.connect(p);
+    p.connect(dest);
+  } else out.connect(dest);
+  const voice = new Voice(ctx, out, noiseBuf, t0);
+  def.play(voice, opts, state);
+  return { out, end: voice.end };
+}
+
 export class Sound {
   constructor() {
     this.ctx = null;
@@ -217,6 +253,9 @@ export class Sound {
     this.listener = { x: 0, z: 0 }; // where the hero is: world sounds get quieter with distance
     this.combo = 0;
     this.lastCoin = -1;
+    // Recording: tap(event) receives each sound instead of it playing; clock() gives the time.
+    this.tap = null;
+    this.clock = null;
 
     const unlock = () => this.unlock();
     for (const ev of ['pointerdown', 'keydown', 'touchend']) window.addEventListener(ev, unlock, true);
@@ -229,7 +268,7 @@ export class Sound {
 
   /** Creates / wakes the audio engine. Must run inside a tap or key press (browser rule). */
   unlock() {
-    if (!this.enabled) return;
+    if (!this.enabled || this.tap) return;
     if (!this.ctx) {
       const AC = window.AudioContext || window.webkitAudioContext;
       if (!AC) return;
@@ -238,19 +277,7 @@ export class Sound {
       } catch {
         return;
       }
-      const ctx = this.ctx;
-      // only squashes peaks when lots of sounds stack up (boss fight + coins + hits)
-      const limiter = ctx.createDynamicsCompressor();
-      limiter.threshold.value = -6;
-      limiter.knee.value = 6;
-      limiter.ratio.value = 10;
-      limiter.connect(ctx.destination);
-      this.master = ctx.createGain();
-      this.master.gain.value = 0.8;
-      this.master.connect(limiter);
-      this.noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
-      const data = this.noiseBuf.getChannelData(0);
-      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+      Object.assign(this, mixBus(this.ctx));
     }
     if (this.ctx.state !== 'running' && !document.hidden) this.ctx.resume().catch(() => {});
   }
@@ -266,8 +293,9 @@ export class Sound {
   play(name, opts = {}) {
     const def = SOUNDS[name];
     const ctx = this.ctx;
-    if (!def || !this.enabled || !ctx || ctx.state !== 'running') return;
-    const now = ctx.currentTime;
+    if (!def || !this.enabled) return;
+    if (!this.tap && (!ctx || ctx.state !== 'running')) return;
+    const now = this.tap ? this.clock() : ctx.currentTime;
     if (def.gap && now - (this.last.get(name) ?? -1) < def.gap) return;
 
     let vol = 1;
@@ -281,16 +309,11 @@ export class Sound {
     }
     this.last.set(name, now);
 
-    const out = ctx.createGain();
-    out.gain.value = vol * (def.vol ?? 1);
-    if (pan && ctx.createStereoPanner) {
-      const p = ctx.createStereoPanner();
-      p.pan.value = pan;
-      out.connect(p);
-      p.connect(this.master);
-    } else out.connect(this.master);
-    const voice = new Voice(ctx, out, this.noiseBuf, now + 0.005);
-    def.play(voice, opts, this);
-    setTimeout(() => out.disconnect(), (voice.end - now + 0.3) * 1000);
+    if (this.tap) {
+      this.tap({ t: now, name, opts: opts.voice ? { voice: opts.voice } : undefined, vol, pan });
+      return;
+    }
+    const { out, end } = renderSound(ctx, this.master, this.noiseBuf, name, opts, vol, pan, now + 0.005, this);
+    setTimeout(() => out.disconnect(), (end - now + 0.3) * 1000);
   }
 }

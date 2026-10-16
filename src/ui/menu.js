@@ -1,4 +1,4 @@
-import { ICON, escapeHtml } from './dom.js';
+import { ICON, escapeHtml, formatDuration } from './dom.js';
 
 // Pause menu, help, start-over confirmation, faint screen and credits.
 
@@ -10,6 +10,8 @@ export function pauseView(game) {
       const opt = (v, label) => `<button class="seg ${q === v ? 'on' : ''}" data-act="quality" data-v="${v}">${label}</button>`;
       const snd = game.sound.enabled;
       const sndOpt = (on, label) => `<button class="seg ${snd === on ? 'on' : ''}" data-act="sound" data-v="${on ? 'on' : 'off'}">${label}</button>`;
+      const mus = game.music.enabled;
+      const musOpt = (on, label) => `<button class="seg ${mus === on ? 'on' : ''}" data-act="music" data-v="${on ? 'on' : 'off'}">${label}</button>`;
       return `<header><h2>Paused</h2><button class="x" data-act="close" aria-label="Close">✕</button></header>
         <div class="menu-list">
           <button class="big" data-act="close">▶ Resume</button>
@@ -17,6 +19,7 @@ export function pauseView(game) {
           <button class="big" data-act="help">? How to play</button>
           <div class="setting"><span>Graphics</span><div class="segs">${opt('auto', 'Auto')}${opt('low', 'Fast')}${opt('high', 'Sharp')}</div></div>
           <div class="setting"><span>Sound</span><div class="segs">${sndOpt(true, 'On')}${sndOpt(false, 'Off')}</div></div>
+          <div class="setting"><span>Music</span><div class="segs">${musOpt(true, 'On')}${musOpt(false, 'Off')}</div></div>
           ${document.fullscreenEnabled ? `<button class="big" data-act="fullscreen">⛶ ${document.fullscreenElement ? 'Exit full screen' : 'Full screen'}</button>` : ''}
           <button class="big danger" data-act="reset">↺ Start over</button>
         </div>`;
@@ -27,6 +30,9 @@ export function pauseView(game) {
       else if (act === 'reset') game.panel.show(confirmResetView(game));
       else if (act === 'sound') {
         game.sound.setEnabled(data.v === 'on');
+        game.panel.refresh();
+      } else if (act === 'music') {
+        game.music.setEnabled(data.v === 'on');
         game.panel.refresh();
       } else if (act === 'quality') {
         game.gfx.setQuality(data.v);
@@ -122,8 +128,10 @@ export function creditsView(game) {
     render: () => `<header><h2>Whiskerwood is saved!</h2></header>
       <p class="intro">All three Sun Gems shine in the Lantern Tower again, thanks to <b>${escapeHtml(game.state.name)} the HeroCat</b>.</p>
       <div class="stat-cards">
+        <div class="card">${ICON.star}<div><b>${formatDuration(game.state.playTime)}</b><small>to save the village</small></div></div>
         <div class="card">${ICON.sword}<div><b>${game.state.kills}</b><small>monsters defeated</small></div></div>
-        <div class="card">${ICON.coin}<div><b>${game.state.gold}</b><small>gold in your pocket</small></div></div>
+        <div class="card">${ICON.coin}<div><b>${game.state.goldEarned}</b><small>gold earned</small></div></div>
+        <div class="card">${ICON.heart}<div><b>${game.state.faints}</b><small>${game.state.faints === 1 ? 'time' : 'times'} you fainted</small></div></div>
       </div>
       <p class="note">THE END… for now. Thanks for playing HeroCat!</p>
       <button class="big" data-act="continue">Keep playing</button>`,

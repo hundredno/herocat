@@ -10,9 +10,12 @@
 }
 #ui button {
   pointer-events: auto;
-  font: inherit;
   color: inherit;
   cursor: pointer;
+}
+/* Zero specificity, so button classes (.big, .buy, .tab…) can still set their own size and weight. */
+:where(#ui) button {
+  font: inherit;
 }
 .hidden {
   display: none !important;
@@ -277,9 +280,11 @@ body:not([data-mode='play']) .touch-controls {
   width: 50%;
   height: 50%;
 }
-.attack-btn:active {
+.attack-btn:active,
+.attack-btn.pressed {
   transform: translateY(3px);
   box-shadow: 0 2px 0 #a3241c;
+  filter: brightness(1.12);
 }
 
 /* ------------------------------------------------------------ floaters */

@@ -15,17 +15,18 @@ function readPref() {
  * WebGL renderer plus adaptive resolution: if frames get slow, render fewer pixels.
  * Quality 'auto' steps the pixel ratio down; 'high'/'low' pin it.
  */
-export function createRenderer(canvas) {
+export function createRenderer(canvas, { dpr: forceDpr = 0, antialias } = {}) {
   const coarse = matchMedia('(pointer: coarse)').matches;
   const dpr = window.devicePixelRatio || 1;
   const renderer = new WebGLRenderer({
     canvas,
-    antialias: !coarse && dpr < 1.5,
+    antialias: antialias ?? (!coarse && dpr < 1.5),
     powerPreference: 'default',
     stencil: false,
   });
 
-  const top = Math.min(dpr, 1.5);
+  // forceDpr: recordings render at the full device pixel ratio instead of the 1.5 cap
+  const top = forceDpr || Math.min(dpr, 1.5);
   const levels = [...new Set([top, 1.25, 1, 0.75].filter((r) => r <= top))];
   let mode = readPref();
   let idx = 0;

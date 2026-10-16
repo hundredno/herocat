@@ -7,7 +7,9 @@ const MIN_HALF_HEIGHT = 7.5;
 
 /** Fixed-angle follow camera that widens its view on narrow (portrait) screens. */
 export class FollowCamera {
-  constructor() {
+  /** zoom > 1 frames the hero closer (recordings only: e.g. a vertical video). */
+  constructor(zoom = 1) {
+    this.zoom = zoom;
     this.cam = new PerspectiveCamera(45, 1, 1, 140);
     this.offset = BASE_OFFSET.clone();
     this.target = new Vector3();
@@ -18,7 +20,7 @@ export class FollowCamera {
 
   resize(w, h) {
     const aspect = w / h;
-    const needHalfH = Math.max(MIN_HALF_HEIGHT, MIN_HALF_WIDTH / aspect);
+    const needHalfH = Math.max(MIN_HALF_HEIGHT, MIN_HALF_WIDTH / aspect) / this.zoom;
     const fov = MathUtils.clamp(2 * Math.atan(needHalfH / BASE_DIST), MathUtils.degToRad(40), MathUtils.degToRad(60));
     const scale = Math.max(1, needHalfH / (Math.tan(fov / 2) * BASE_DIST));
     this.cam.fov = MathUtils.radToDeg(fov);

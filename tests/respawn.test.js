@@ -26,6 +26,22 @@ describe('respawning', () => {
     expect(r.queue).toHaveLength(0);
   });
 
+  it('waits while the hero stands on the spawn point, then comes back once it is clear', () => {
+    const r = new Respawns();
+    const sp = { type: 'rat', x: 0, z: 0 };
+    r.add(enemy('rat', sp));
+    let blocked = true;
+    const back = [];
+    const spawn = (p) => back.push(p);
+    const heroOnIt = () => blocked;
+    r.update(12, spawn, heroOnIt);
+    r.update(5, spawn, heroOnIt);
+    expect(back).toEqual([]);
+    blocked = false;
+    r.update(1 / 30, spawn, heroOnIt);
+    expect(back).toEqual([sp]);
+  });
+
   it('forgets pending respawns when you leave the cave', () => {
     const r = new Respawns();
     r.add(enemy('bat', { type: 'bat', x: 0, z: 0 }));

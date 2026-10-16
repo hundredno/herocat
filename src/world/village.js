@@ -224,15 +224,16 @@ export function createVillage() {
   ];
 
   const interactables = [
-    { kind: 'talk', x: elder.x, z: elder.z, r: 2.3, label: 'Talk to Elder Mittens', action: (g) => g.say(elderLines(g.state)) },
-    { kind: 'talk', x: sx, z: sz + 2.6, r: 2.3, label: "Visit Biscuit's shop", action: (g) => g.openShop() },
-    { kind: 'talk', x: tx, z: tz, r: 3.4, label: 'Place the Sun Gem', when: (g) => carryingGem(g.state), action: (g) => g.placeGem() },
-    { kind: 'talk', x: tom.x, z: tom.z, r: 2.3, label: 'Talk to Tom', action: (g) => g.say(villagerLines('tom', g.state)) },
-    { kind: 'talk', x: luna.x, z: luna.z, r: 2.3, label: 'Talk to Luna', action: (g) => g.say(villagerLines('luna', g.state)) },
-    { kind: 'zone', x: fx, z: fz, r: 3.2, action: (g) => g.healAtFountain() },
+    { id: 'elder', kind: 'talk', x: elder.x, z: elder.z, r: 2.3, label: 'Talk to Elder Mittens', action: (g) => g.say(elderLines(g.state)) },
+    { id: 'shop', kind: 'talk', x: sx, z: sz + 2.6, r: 2.3, label: "Visit Biscuit's shop", action: (g) => g.openShop() },
+    { id: 'tower', kind: 'talk', x: tx, z: tz, r: 3.4, label: 'Place the Sun Gem', when: (g) => carryingGem(g.state), action: (g) => g.placeGem() },
+    { id: 'tom', kind: 'talk', x: tom.x, z: tom.z, r: 2.3, label: 'Talk to Tom', action: (g) => g.say(villagerLines('tom', g.state)) },
+    { id: 'luna', kind: 'talk', x: luna.x, z: luna.z, r: 2.3, label: 'Talk to Luna', action: (g) => g.say(villagerLines('luna', g.state)) },
+    { id: 'fountain', kind: 'zone', x: fx, z: fz, r: 3.2, action: (g) => g.healAtFountain() },
     ...CAVE_X.flatMap((cx, i) => [
-      { kind: 'trigger', x: cx, z: CLIFF_Z + 0.5, r: 0.95, when: (g) => isCaveUnlocked(g.state, i), action: (g) => g.enterCave(i) },
+      { id: `cave${i}`, kind: 'trigger', x: cx, z: CLIFF_Z + 0.5, r: 0.95, when: (g) => isCaveUnlocked(g.state, i), action: (g) => g.enterCave(i) },
       {
+        id: `locked${i}`,
         kind: 'trigger',
         x: cx,
         z: CLIFF_Z + 2.2,

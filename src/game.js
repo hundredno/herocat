@@ -3,9 +3,10 @@ import { Sound } from './engine/audio.js';
 import { FollowCamera } from './engine/camera.js';
 import { Input } from './engine/input.js';
 import { startLoop } from './engine/loop.js';
+import { Music } from './engine/music.js';
 import { createRenderer } from './engine/renderer.js';
 import { GuideArrow } from './game/arrow.js';
-import { PLAYER, SUN_GEM_COLORS } from './game/balance.js';
+import { PLAYER, RESPAWN_CLEARANCE, SUN_GEM_COLORS } from './game/balance.js';
 import { damageTaken, formatDamage, goldAfterFainting, inAttackArc, rollGold, splitCoins } from './game/combat.js';
 import { catalog, grantItem, unlockedForSale } from './game/economy.js';
 import { Particles } from './game/effects.js';
@@ -30,7 +31,13 @@ const CAVE_LOADERS = [() => import('./world/caves/cave1.js'), () => import('./wo
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export function boot({ canvas, ui }) {
-  return new Game(canvas, ui);
+  // ?autoplay: a bot plays (demo mode, playtests, video recordings). Its chunk only loads then.
+  // ?autoplay&rec: recording mode, which may also ask for a sharper picture (dpr, antialias) or a closer camera (zoom).
+  const params = new URLSearchParams(location.search);
+  const rec = params.has('autoplay') && params.has('rec');
+  const game = new Game(canvas, ui, rec ? { dpr: Number(params.get('dpr')) || 0, antialias: params.get('aa') !== '0', zoom: Number(params.get('zoom')) || 1 } : {});
+  if (params.has('autoplay')) import('./bot/autoplay.js').then((m) => m.start(game, params)).catch((err) => console.error(err));
+  return game;
 }
 
 /**
@@ -38,9 +45,11 @@ export function boot({ canvas, ui }) {
  * The world only simulates in 'play'; everything else freezes it but keeps rendering.
  */
 class Game {
-  constructor(canvas, ui) {
-    this.gfx = createRenderer(canvas);
-    this.camera = new FollowCamera();
+  /** gfx: recording-only overrides ({ dpr, antialias } for the renderer, zoom for the camera). */
+  constructor(canvas, ui, gfx = {}) {
+    this.gfx = createRenderer(canvas, gfx);
+    this.noRender = false; // the bot's fast-forward skips drawing frames nobody sees
+    this.camera = new FollowCamera(gfx.zoom);
     this.vignette = el('div');
     this.vignette.id = 'vignette';
     ui.before(this.vignette);
@@ -53,6 +62,7 @@ class Game {
       onAction: () => this.input.press('Action'),
     });
     this.sound = new Sound();
+    this.music = new Music(this.sound);
     this.dialogue = new Dialogue(ui, () => this.state.name, (voice) => this.sound.play('blip', { voice }));
     // a soft tick for every on-screen button (menus, HUD, shop)
     ui.addEventListener('click', (e) => e.target.closest('button') && this.sound.play('click'));
@@ -73,6 +83,7 @@ class Game {
     this.bossIntroShown = new Set();
     this.talkTarget = null;
     this.waits = [];
+    this.cutscene = false; // the hero can't be hurt (Sun Gem moment)
     this.time = 0;
     this.dirty = false;
     this.saveTimer = 0;
@@ -155,9 +166,13 @@ class Game {
     this.input.reset();
     await this.dialogue.play(lines);
     if (this.mode === 'dialogue') this.setMode('play');
+    this.input.holdOff(); // the Space that closed the text shouldn't swing the sword
   }
 
-  /** Waits in game time ('play' mode only), so pausing also pauses cutscenes. */
+  /**
+   * Waits in game time ('play' mode only), so pausing also pauses cutscenes. Changing level ends
+   * every wait early; cutscenes check they're still in the same level afterwards.
+   */
   wait(seconds) {
     return new Promise((resolve) => this.waits.push({ t: seconds, resolve }));
   }
@@ -180,7 +195,8 @@ class Game {
     if (pending) this.addGold(pending);
     this.particles.clear();
     this.floaters.clear();
-    this.waits = [];
+    for (const w of this.waits.splice(0)) w.resolve();
+    this.cutscene = false;
     for (const e of this.enemies) e.dispose();
     this.enemies = [];
     this.respawns.clear();
@@ -305,11 +321,20 @@ class Game {
     this.particles.update(dt);
     this.particles.render();
     this.coins.render(t);
-    this.gfx.renderer.render(this.level.scene, this.camera.cam);
+    if (!this.noRender) this.gfx.renderer.render(this.level.scene, this.camera.cam);
     this.floaters.update(dt, this.camera.cam, this.enemies);
     this.updateHud();
+    this.music.set(this.pickMusic());
+    this.music.update();
     if (this.dirty && (this.saveTimer -= dt) <= 0) this.save();
     this.input.endFrame();
+  }
+
+  /** The song for what's happening now. */
+  pickMusic() {
+    if (this.panel.view?.className?.includes('credits')) return 'saved';
+    if (this.level.kind === 'cave') return this.boss && !this.boss.dead ? 'boss' : 'cave';
+    return this.state.gemsPlaced >= 3 ? 'saved' : 'village';
   }
 
   handleKeys() {
@@ -328,6 +353,7 @@ class Game {
   }
 
   simulate(dt) {
+    this.state.playTime += dt;
     const steps = Math.max(1, Math.ceil(dt * 30));
     const h = dt / steps;
     for (let i = 0; i < steps && this.mode === 'play'; i++) this.step(h);
@@ -385,7 +411,11 @@ class Game {
       this.enemies = list.filter((e) => !e.gone);
     }
 
-    this.respawns.update(h, (sp) => this.respawnEnemy(sp));
+    this.respawns.update(
+      h,
+      (sp) => this.respawnEnemy(sp),
+      (sp) => Math.hypot(p.x - sp.x, p.z - sp.z) < RESPAWN_CLEARANCE,
+    );
     const gold = this.coins.update(h, p);
     if (gold) {
       this.addGold(gold);
@@ -487,7 +517,7 @@ class Game {
 
   damagePlayer(dmg, src) {
     const p = this.player;
-    if (p.dead || p.iframes > 0) return;
+    if (p.dead || p.iframes > 0 || this.cutscene) return;
     const taken = damageTaken(dmg, damageBlock(this.state));
     p.hp = Math.max(0, Math.round((p.hp - taken) * 1000) / 1000);
     p.iframes = PLAYER.iframes;
@@ -542,25 +572,51 @@ class Game {
 
   async onBossDefeated(e) {
     const s = this.state;
-    const index = this.level.def.index;
+    const level = this.level;
+    const index = level.def.index;
     s.gemsFound = Math.max(s.gemsFound, index + 1);
     if (e.type === 'gnawfang') grantItem(s, 'helmet', 'crown', 500);
     this.onGearChanged();
     this.boss = null;
+    // The Sun Gem moment always plays out: the boss's helpers flee and nothing can hurt the hero.
+    this.cutscene = true;
+    this.dismissHelpers(e);
     await this.wait(1);
+    if (this.level !== level) return this.checkUnlocks();
     const p = this.player;
     p.hold(gemModel(SUN_GEM_COLORS[index], 0.32));
     this.sound.play('gem');
     this.particles.burst(p.x, 2.2, p.z, { count: 30, color: SUN_GEM_COLORS[index], speed: 3, up: 3, life: 0.9, size: 0.14, gravity: 3 });
     this.floaters.text('Sun Gem!', p.x, 2.8, p.z, 'big');
     await this.wait(0.8);
+    if (this.level !== level) return this.checkUnlocks();
     await this.say(SCRIPTS.bossDefeated[index]);
     p.hold(null);
+    this.cutscene = false;
     this.level.showBossPortal?.();
     this.checkUnlocks();
   }
 
+  /** Monsters a boss called for help run off in a puff when it falls, dropping their gold. */
+  dismissHelpers(boss) {
+    let any = false;
+    for (const h of this.enemies) {
+      if (h.dead || h.boss || h.spawn) continue;
+      any = true;
+      h.dead = true;
+      h.state = 'dead';
+      const gold = rollGold(h.def.gold);
+      this.coins.spawn(h.x, h.z, splitCoins(gold));
+      this.particles.burst(h.x, 0.6, h.z, { count: 14, color: 0xa29bfe, speed: 4, up: 3, life: 0.6, size: 0.18 });
+    }
+    if (any) {
+      this.sound.play('pop', { x: boss.x, z: boss.z });
+      this.toast(`${boss.def.name}'s helpers ran away!`, 2200);
+    }
+  }
+
   faint() {
+    this.state.faints++;
     this.sound.play('faint');
     this.player.dead = true;
     this.player.deadTime = 0;
@@ -571,7 +627,10 @@ class Game {
   showFaint() {
     const s = this.state;
     const pending = this.coins.collectAll();
-    if (pending) s.gold += pending;
+    if (pending) {
+      s.gold += pending;
+      s.goldEarned += pending;
+    }
     const lost = s.gold - goldAfterFainting(s.gold);
     s.gold -= lost;
     this.save();
@@ -590,6 +649,7 @@ class Game {
 
   addGold(n) {
     this.state.gold += n;
+    this.state.goldEarned += n;
     this.dirty = true;
   }
 
@@ -618,7 +678,9 @@ class Game {
       this.particles.burst(bx, 1, bz, { count: 30, color: 0x9a9184, speed: 5, up: 4, life: 0.8, size: 0.3 });
     }
     this.camera.shake(0.3, 0.5);
+    const level = this.level;
     await this.wait(1.4);
+    if (this.level !== level) return;
     await this.say(SCRIPTS.gemPlaced[n]);
     if (s.gemsPlaced >= 3 && !s.finished) {
       s.finished = true;
@@ -727,6 +789,7 @@ class Game {
   closePanel() {
     if (this.panel.open) this.panel.close();
     if (this.mode === 'panel') this.setMode('play');
+    this.input.holdOff();
     this.checkUnlocks();
   }
 

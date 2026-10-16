@@ -81,6 +81,7 @@ out
 # Nuxt.js build / generate output
 .nuxt
 dist
+dist-rec
 .output
 
 # Gatsby files
@@ -155,3 +156,6 @@ vite.config.ts.timestamp-*
 test-results/
 playwright-report/
 .playwright-mcp/
+
+# Bot recordings and playtest output (videos are never committed)
+recordings/

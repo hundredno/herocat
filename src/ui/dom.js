@@ -9,6 +9,17 @@ const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'
 /** For player-typed text (the hero's name) going into an HTML string. */
 export const escapeHtml = (text) => String(text).replace(/[&<>"']/g, (c) => HTML_ESCAPES[c]);
 
+/** Play time for people: "45s", "12m 05s", "1h 02m". */
+export function formatDuration(seconds) {
+  const t = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
+  if (h) return `${h}h ${String(m).padStart(2, '0')}m`;
+  if (m) return `${m}m ${String(s).padStart(2, '0')}s`;
+  return `${s}s`;
+}
+
 // Inline SVG icons (emoji coverage varies a lot on older phones, so the HUD avoids them).
 export const ICON = {
   heart:
