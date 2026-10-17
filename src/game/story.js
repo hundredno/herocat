@@ -112,7 +112,8 @@ export const SCRIPTS = {
     [
       ['elder', 'Two Sun Gems! Whiskerwood is getting warmer!'],
       ['elder', 'The way to the Deep Dark, the cave on the right, is open now. Gnawfang himself guards the last gem.'],
-      ['elder', 'He is VERY strong. Try to train your HP and damage to level 4 before you face him!'],
+      ['elder', 'He is VERY strong. Try to train your HP and damage to level 5 before you face him!'],
+      ['elder', 'And keep your eyes open in the Deep Dark. Some say an old treasure chest is hidden there…'],
     ],
     [
       ['story', '{name} placed the last Sun Gem in the Lantern Tower…'],
@@ -143,7 +144,7 @@ export function elderLines(s) {
     case 1:
       return [['elder', 'Crystal Hollow is the middle cave. Slimes and spiders live there. Someone was heard calling for help inside, too…']];
     case 2:
-      return [['elder', 'Gnawfang waits in the Deep Dark, the cave on the right. Train your HP and damage to level 4 before you go!']];
+      return [['elder', 'Gnawfang waits in the Deep Dark, the cave on the right. Train your HP and damage to level 5 before you go, and look for the treasure chest inside!']];
     default:
       return [['elder', 'Thanks to you, Whiskerwood shines again. The caves are still full of monsters if you want to keep training!']];
   }

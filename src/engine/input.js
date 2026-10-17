@@ -24,6 +24,9 @@ export class Input {
     this.touchAttack = new Set();
     this.mouseAttack = false;
     this.touchMode = false;
+    // Attack inputs already held when a dialogue or menu closed; ignored until let go (see holdOff).
+    this.heldOver = new Set();
+    this.swordPointers = new Set();
 
     this.el = document.createElement('div');
     this.el.className = 'touch-controls';
@@ -34,6 +37,7 @@ export class Input {
     this.base = this.el.querySelector('.stick-base');
     this.knob = this.el.querySelector('.stick-knob');
     const attackBtn = this.el.querySelector('.attack-btn');
+    this.attackBtn = attackBtn;
 
     window.addEventListener('keydown', (e) => {
       if (e.target instanceof HTMLInputElement) return;
@@ -42,7 +46,10 @@ export class Input {
       if (!e.repeat) this.pressed.add(e.code);
       this.down.add(e.code);
     });
-    window.addEventListener('keyup', (e) => this.down.delete(e.code));
+    window.addEventListener('keyup', (e) => {
+      this.down.delete(e.code);
+      this.heldOver.delete(e.code);
+    });
     window.addEventListener('blur', () => this.reset());
 
     canvas.addEventListener('pointerdown', (e) => {
@@ -75,9 +82,14 @@ export class Input {
       this.knob.style.transform = `translate(${dx}px, ${dy}px)`;
     });
     const release = (e) => {
-      if (e.pointerType === 'mouse') this.mouseAttack = false;
+      if (e.pointerType === 'mouse') {
+        this.mouseAttack = false;
+        this.heldOver.delete('mouse');
+      }
       if (this.stick && e.pointerId === this.stick.id) this.endStick();
       this.touchAttack.delete(e.pointerId);
+      this.heldOver.delete(e.pointerId);
+      if (this.swordPointers.delete(e.pointerId)) attackBtn.classList.toggle('pressed', this.swordPointers.size > 0);
     };
     window.addEventListener('pointerup', release);
     window.addEventListener('pointercancel', release);
@@ -86,6 +98,8 @@ export class Input {
       e.preventDefault();
       this.setTouchMode(e.pointerType !== 'mouse' || this.touchMode);
       this.touchAttack.add(e.pointerId);
+      this.swordPointers.add(e.pointerId);
+      attackBtn.classList.add('pressed');
     });
     attackBtn.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -106,7 +120,18 @@ export class Input {
   }
 
   get attackHeld() {
-    return ATTACK_KEYS.some((k) => this.down.has(k)) || this.touchAttack.size > 0 || this.mouseAttack;
+    const free = (k) => !this.heldOver.has(k);
+    return ATTACK_KEYS.some((k) => this.down.has(k) && free(k)) || [...this.touchAttack].some(free) || (this.mouseAttack && free('mouse'));
+  }
+
+  /**
+   * Call when play resumes after a dialogue or menu: the Space that closed it (or a finger still
+   * down) shouldn't also swing the sword. Each one counts again once it's released.
+   */
+  holdOff() {
+    for (const k of ATTACK_KEYS) if (this.down.has(k)) this.heldOver.add(k);
+    for (const id of this.touchAttack) this.heldOver.add(id);
+    if (this.mouseAttack) this.heldOver.add('mouse');
   }
 
   wasPressed(...codes) {
@@ -154,6 +179,9 @@ export class Input {
     this.pressed.clear();
     this.touchAttack.clear();
     this.mouseAttack = false;
+    this.heldOver.clear();
+    this.swordPointers.clear();
+    this.attackBtn.classList.remove('pressed');
     if (this.stick) this.endStick();
   }
 }

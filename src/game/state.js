@@ -37,6 +37,10 @@ export function newState() {
     cavesVisited: {},
     finished: false,
     kills: 0,
+    // run stats, shown on the credits and in the Hero panel's adventure log
+    playTime: 0, // seconds of play (menus and story text don't count)
+    goldEarned: 0,
+    faints: 0,
   };
 }
 
@@ -83,6 +87,9 @@ export function sanitize(raw) {
   s.helpSeen = raw.helpSeen === true;
   s.finished = raw.finished === true;
   s.kills = int(raw.kills, 0, 1e9, 0);
+  s.playTime = Number.isFinite(raw.playTime) ? Math.min(1e9, Math.max(0, raw.playTime)) : 0;
+  s.goldEarned = int(raw.goldEarned, 0, 1e12, 0);
+  s.faints = int(raw.faints, 0, 1e9, 0);
   return s;
 }
 

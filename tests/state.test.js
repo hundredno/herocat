@@ -42,6 +42,12 @@ describe('save data', () => {
     expect(s).toMatchObject({ name: 'Pip', armors: [], armor: null, helpSeen: false, gold: 320, hpLevel: 3, weapon: 'club', helmet: 'leaf', gemsPlaced: 1, kills: 40 });
   });
 
+  it('adds run stats to older saves and keeps sane ones', () => {
+    expect(deserialize(JSON.stringify({ kills: 9 }))).toMatchObject({ playTime: 0, goldEarned: 0, faints: 0, kills: 9 });
+    expect(deserialize(JSON.stringify({ playTime: 754.25, goldEarned: 1200, faints: 2 }))).toMatchObject({ playTime: 754.25, goldEarned: 1200, faints: 2 });
+    expect(deserialize(JSON.stringify({ playTime: -5, goldEarned: 'lots', faints: 1.7 }))).toMatchObject({ playTime: 0, goldEarned: 0, faints: 1 });
+  });
+
   it('drops armor you do not own or that does not exist', () => {
     expect(deserialize(JSON.stringify({ armors: ['sweater', 'tank'], armor: 'chain' }))).toMatchObject({ armors: ['sweater'], armor: null });
   });

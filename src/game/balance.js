@@ -51,6 +51,9 @@ export const PLAYER = {
   iframes: 0.9,
 };
 
+// A respawning monster waits until the hero is at least this far from its spawn point.
+export const RESPAWN_CLEARANCE = 4;
+
 // When you faint you keep this share of your gold.
 export const FAINT_GOLD_KEPT = 0.5;
 
@@ -74,8 +77,10 @@ export const ENEMIES = {
     summon: { type: 'spider', count: 2, at: [0.66, 0.33] },
   },
   gnawfang: {
-    name: 'Gnawfang the Rat King', hp: 700, dmg: 14, gold: [1000, 1000], speed: 2.8, radius: 1.3, aggro: 11,
-    range: 2.2, reach: 3.4, windup: 0.9, recover: 0.8, boss: true,
+    // dmg 14 → 12 and windup 0.9 → 1.05 after bot playtests (plan 2): at the Elder's advice
+    // (Lv 5) a slow-reacting player now wins about 9 times in 10 instead of 4 in 10.
+    name: 'Gnawfang the Rat King', hp: 700, dmg: 12, gold: [1000, 1000], speed: 2.8, radius: 1.3, aggro: 11,
+    range: 2.2, reach: 3.4, windup: 1.05, recover: 0.8, boss: true,
     summon: { type: 'ratGuard', count: 2, at: [0.75, 0.5, 0.25] },
     enrageAt: 0.5, // below half HP he gets faster
   },
